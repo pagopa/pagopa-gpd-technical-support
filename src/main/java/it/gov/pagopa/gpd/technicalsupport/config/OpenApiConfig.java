@@ -29,34 +29,32 @@ import org.springframework.context.annotation.Configuration;
 public class OpenApiConfig {
 
   @Bean
-  public OpenAPI customOpenAPI(
-      @Value("${info.application.artifactId}") String appName,
+  OpenAPI customOpenAPI(
+      @Value("${info.application.name}") String appName,
       @Value("${info.application.description}") String appDescription,
       @Value("${info.application.version}") String appVersion) {
+
     return new OpenAPI()
         .servers(
             List.of(
                 new Server().url("http://localhost:8080"),
                 new Server()
-                    .url("https://{host}{basePath}")
+                    .url("https://api.{environment}.platform.pagopa.it/gpd-technical-support")
                     .variables(
                         new ServerVariables()
                             .addServerVariable(
-                                "host",
+                                "environment",
                                 new ServerVariable()
-                                    ._enum(List.of("dev", "uat", "prod")) // TODO: set server hosts
-                                    ._default("")) // TODO: set default server host
-                            .addServerVariable(
-                                "basePath",
-                                new ServerVariable()._default("")) // TODO: set app base path
-                        )))
+                                    ._enum(List.of("dev", "uat"))
+                                    ._default("dev"))),
+                new Server().url("https://api.platform.pagopa.it/gpd-technical-support")))
         .components(
             new Components()
                 .addSecuritySchemes(
                     "ApiKey",
                     new SecurityScheme()
                         .type(SecurityScheme.Type.APIKEY)
-                        .description("The API key to access this function app.")
+                        .description("API key required to access the service.")
                         .name("Ocp-Apim-Subscription-Key")
                         .in(SecurityScheme.In.HEADER)))
         .info(
@@ -68,7 +66,7 @@ public class OpenApiConfig {
   }
 
   @Bean
-  public GlobalOpenApiCustomizer sortOperationsAlphabetically() {
+  GlobalOpenApiCustomizer sortOperationsAlphabetically() {
     return openApi -> {
       Paths paths =
           openApi.getPaths().entrySet().stream()
@@ -99,7 +97,7 @@ public class OpenApiConfig {
   }
 
   @Bean
-  public GlobalOpenApiCustomizer addCommonHeaders() {
+  GlobalOpenApiCustomizer addCommonHeaders() {
     return openApi ->
         openApi
             .getPaths()

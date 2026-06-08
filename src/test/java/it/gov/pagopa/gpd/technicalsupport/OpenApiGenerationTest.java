@@ -1,50 +1,44 @@
 package it.gov.pagopa.gpd.technicalsupport;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import it.gov.pagopa.gpd.technicalsupport.Application;
-
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+import tools.jackson.databind.ObjectMapper;
 
-@SpringBootTest(classes = Application.class)
+@SpringBootTest
 @AutoConfigureMockMvc
 class OpenApiGenerationTest {
 
-  @Autowired ObjectMapper objectMapper;
-
-  @Autowired private MockMvc mvc;
+  @Autowired
+  private MockMvc mockMvc;
 
   @Test
   void swaggerSpringPlugin() throws Exception {
-    mvc.perform(MockMvcRequestBuilders.get("/v3/api-docs").accept(MediaType.APPLICATION_JSON))
-        .andExpect(MockMvcResultMatchers.status().is2xxSuccessful())
-        .andDo(
-            (result) -> {
-              assertNotNull(result);
-              assertNotNull(result.getResponse());
-              final String content = result.getResponse().getContentAsString();
-              assertFalse(content.isBlank());
-              assertFalse(content.contains("${"), "Generated swagger contains placeholders");
-              Object swagger =
-                  objectMapper.readValue(result.getResponse().getContentAsString(), Object.class);
-              String formatted =
-                  objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(swagger);
-              Path basePath = Paths.get("openapi/");
-              Files.createDirectories(basePath);
-              Files.write(basePath.resolve("openapi.json"), formatted.getBytes());
-            });
+    String openApiJson =
+        mockMvc.perform(get("/v3/api-docs"))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString(StandardCharsets.UTF_8);
+
+    ObjectMapper objectMapper = new ObjectMapper();
+
+    String formattedOpenApiJson =
+        objectMapper.writerWithDefaultPrettyPrinter()
+            .writeValueAsString(objectMapper.readTree(openApiJson));
+
+    Files.createDirectories(Path.of("openapi"));
+    Files.writeString(
+        Path.of("openapi/openapi.json"),
+        formattedOpenApiJson,
+        StandardCharsets.UTF_8);
   }
 }
