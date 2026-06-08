@@ -13,7 +13,7 @@ data "azurerm_kubernetes_cluster" "aks" {
 }
 
 data "azurerm_user_assigned_identity" "workload_identity_clientid" {
-  name                = "<domain>-workload-identity" # TODO set domain
+  name                = "gps-workload-identity"
   resource_group_name = "pagopa-${var.env_short}-${local.location_short}-${var.env}-aks-rg"
 }
 
@@ -30,12 +30,6 @@ data "github_organization_teams" "all" {
 data "azurerm_key_vault" "key_vault" {
   name                = "pagopa-${var.env_short}-kv"
   resource_group_name = "pagopa-${var.env_short}-sec-rg"
-}
-
-
-data "azurerm_user_assigned_identity" "identity_pr_01" {
-  name                = "${local.prefix}-${var.env_short}-${local.domain}-01-pr-github-cd-identity"
-  resource_group_name = "${local.prefix}-${var.env_short}-identity-rg"
 }
 
 data "azurerm_key_vault" "domain_key_vault" {
