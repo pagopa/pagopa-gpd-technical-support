@@ -16,6 +16,7 @@ public class PositionStatusReconciliationOrchestrator {
 
   private final PositionStatusReconciliationValidator validator;
   private final ReconciliationRunStore runStore;
+  private final PositionStatusReconciliationRunner runner;
 
   public PositionStatusReconciliationResponse start(PositionStatusReconciliationRequest request) {
     validator.validate(request);
@@ -34,6 +35,10 @@ public class PositionStatusReconciliationOrchestrator {
               result.logicalRunKey(),
               result.executionId(),
               result.status()));
+
+      if (result.shouldStart()) {
+        runner.run(result);
+      }
 
       day = day.plusDays(1);
     }

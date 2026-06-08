@@ -11,4 +11,14 @@ public interface ReconciliationRunStore {
       LocalDate day,
       List<ServiceType> serviceTypes,
       boolean force);
+
+  void markRunning(String logicalRunKey, String executionId);
+
+  void markDone(String logicalRunKey, String executionId, ReconciliationCounters counters);
+
+  void markFailed(
+      String logicalRunKey,
+      String executionId,
+      ReconciliationCounters counters,
+      Throwable error);
 }
