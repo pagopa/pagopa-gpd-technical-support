@@ -26,8 +26,8 @@ on:
         default: false
 
 env:
-  NAMESPACE: <domain>
-  APP_NAME: <app-name> #TODO: set app name
+  NAMESPACE: gps
+  APP_NAME: pagopa-gpd-technical-support
 
 
 permissions:

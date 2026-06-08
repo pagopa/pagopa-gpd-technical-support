@@ -13,7 +13,7 @@ data "azurerm_kubernetes_cluster" "aks" {
 }
 
 data "azurerm_user_assigned_identity" "workload_identity_clientid" {
-  name                = "<domain>-workload-identity" # TODO set domain
+  name                = "gps-workload-identity"
   resource_group_name = "pagopa-${var.env_short}-${local.location_short}-${var.env}-aks-rg"
 }
 
