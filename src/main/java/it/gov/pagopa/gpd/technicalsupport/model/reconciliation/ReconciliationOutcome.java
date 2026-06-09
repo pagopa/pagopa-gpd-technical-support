@@ -1,0 +1,9 @@
+package it.gov.pagopa.gpd.technicalsupport.model.reconciliation;
+
+public enum ReconciliationOutcome {
+  POSITIVE_EVENT_FOUND_PAY_EXECUTED,
+  POSITIVE_EVENT_FOUND_EXPIRED_MANUAL_REQUIRED,
+  POSITIVE_EVENT_FOUND_INVALID_MANUAL_REQUIRED,
+  POSITIVE_EVENT_FOUND_PAY_FAILED,
+  BIZ_LOOKUP_FAILED
+}
