@@ -2,7 +2,6 @@ package it.gov.pagopa.gpd.technicalsupport.model.reconciliation.cosmos;
 
 import it.gov.pagopa.gpd.technicalsupport.model.gpd.ServiceType;
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.ReconciliationRunStatus;
-import java.time.OffsetDateTime;
 import java.util.List;
 import lombok.Builder;
 
@@ -26,7 +25,7 @@ public record ReconciliationRunDocument(
     long payFailed,
     String errorCode,
     String errorMessage,
-    OffsetDateTime createdAt,
-    OffsetDateTime updatedAt,
-    OffsetDateTime startedAt,
-    OffsetDateTime completedAt) {}
+    String createdAt,
+    String updatedAt,
+    String startedAt,
+    String completedAt) {}

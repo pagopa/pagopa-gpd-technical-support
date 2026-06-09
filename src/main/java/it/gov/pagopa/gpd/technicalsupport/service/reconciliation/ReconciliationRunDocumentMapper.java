@@ -3,7 +3,6 @@ package it.gov.pagopa.gpd.technicalsupport.service.reconciliation;
 import it.gov.pagopa.gpd.technicalsupport.model.gpd.ServiceType;
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.ReconciliationRunStatus;
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.cosmos.ReconciliationRunDocument;
-
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -42,16 +41,16 @@ public class ReconciliationRunDocumentMapper {
         .technicalFailures(0)
         .payExecuted(0)
         .payFailed(0)
-        .createdAt(now)
-        .updatedAt(now)
+        .createdAt(toIsoString(now))
+        .updatedAt(toIsoString(now))
         .build();
   }
 
   public ReconciliationRunDocument running(ReconciliationRunDocument document, OffsetDateTime now) {
     return document.toBuilder()
         .status(ReconciliationRunStatus.RUNNING)
-        .startedAt(now)
-        .updatedAt(now)
+        .startedAt(toIsoString(now))
+        .updatedAt(toIsoString(now))
         .build();
   }
 
@@ -70,8 +69,8 @@ public class ReconciliationRunDocumentMapper {
         .payFailed(counters.payFailed())
         .errorCode(null)
         .errorMessage(null)
-        .completedAt(now)
-        .updatedAt(now)
+        .completedAt(toIsoString(now))
+        .updatedAt(toIsoString(now))
         .build();
   }
 
@@ -94,8 +93,12 @@ public class ReconciliationRunDocumentMapper {
         .payFailed(counters.payFailed())
         .errorCode(error == null ? null : error.getClass().getSimpleName())
         .errorMessage(error == null ? null : error.getMessage())
-        .completedAt(now)
-        .updatedAt(now)
+        .completedAt(toIsoString(now))
+        .updatedAt(toIsoString(now))
         .build();
+  }
+
+  private String toIsoString(OffsetDateTime dateTime) {
+    return dateTime == null ? null : dateTime.toString();
   }
 }
