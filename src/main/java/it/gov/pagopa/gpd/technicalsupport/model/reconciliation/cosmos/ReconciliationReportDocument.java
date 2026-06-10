@@ -5,8 +5,6 @@ import it.gov.pagopa.gpd.technicalsupport.model.gpd.PaymentOptionStatus;
 import it.gov.pagopa.gpd.technicalsupport.model.gpd.ServiceType;
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.ReconciliationOutcome;
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.ReconciliationStatus;
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import lombok.Builder;
 
 @Builder(toBuilder = true)
@@ -15,7 +13,7 @@ public record ReconciliationReportDocument(
     String pk, // pk field: day__serviceType__bucket
     String executionId,
     String logicalRunKey,
-    LocalDate day,
+    String day,
     ServiceType serviceType,
     int bucket,
     String paymentPositionId,
@@ -33,5 +31,5 @@ public record ReconciliationReportDocument(
     boolean paySucceeded,
     String errorCode,
     String errorMessage,
-    OffsetDateTime createdAt,
-    OffsetDateTime updatedAt) {}
+    String createdAt,
+    String updatedAt) {}

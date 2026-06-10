@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 public class PositionStatusReconciliationRunner {
 
   private final ReconciliationRunStore runStore;
+  private final PositionStatusReconciliationProcessor processor;
 
   @Async
   public void run(ReconciliationRunCreationResult run) {
@@ -27,14 +28,7 @@ public class PositionStatusReconciliationRunner {
 
       runStore.markRunning(run.logicalRunKey(), run.executionId());
 
-      /*
-       * TODO next steps:
-       * 1. read candidate payment options from APD;
-       * 2. lookup positive payment events on Biz+;
-       * 3. call GPD-Core /pay only for automatically recoverable cases;
-       * 4. write reports for RECOVERED, MANUAL_REQUIRED and TECHNICAL_FAILURE.
-       */
-      counters = processStub(run);
+      counters = processor.process(run);
 
       runStore.markDone(run.logicalRunKey(), run.executionId(), counters);
 
@@ -53,9 +47,5 @@ public class PositionStatusReconciliationRunner {
           run.executionId(),
           e);
     }
-  }
-
-  private ReconciliationCounters processStub(ReconciliationRunCreationResult run) {
-    return ReconciliationCounters.empty();
   }
 }

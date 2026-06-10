@@ -8,14 +8,12 @@ import org.springframework.stereotype.Component;
 @Getter
 @Setter
 @Component
-@ConfigurationProperties(prefix = "reconciliation.cosmos")
-public class ReconciliationCosmosProperties {
+@ConfigurationProperties(prefix = "reconciliation.biz.cosmos")
+public class ReconciliationBizCosmosProperties {
 
-  private boolean enabled = true;
   private String endpoint;
   private String key;
-  private String databaseName = "gpd_db";
-  private String runsContainerName = "gpd-reconciliation-runs";
-  private String reportsContainerName = "gpd-reconciliation-reports";
+  private String databaseName;
+  private String containerName;
   private boolean useManagedIdentity = false;
 }
