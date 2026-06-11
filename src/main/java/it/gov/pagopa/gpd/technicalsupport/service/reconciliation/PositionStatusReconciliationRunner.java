@@ -1,6 +1,7 @@
 package it.gov.pagopa.gpd.technicalsupport.service.reconciliation;
 
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.ReconciliationRunCreationResult;
+import it.gov.pagopa.gpd.technicalsupport.service.reconciliation.store.ReconciliationRunStore;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;

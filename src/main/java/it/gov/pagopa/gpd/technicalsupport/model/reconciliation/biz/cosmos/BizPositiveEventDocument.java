@@ -5,6 +5,7 @@ public record BizPositiveEventDocument(
     String receiptId,
     DebtorPosition debtorPosition,
     Creditor creditor,
+    Psp psp,
     PaymentInfo paymentInfo,
     Long timestamp,
     Properties properties,
@@ -18,8 +19,20 @@ public record BizPositiveEventDocument(
   public record Creditor(
       String idPA) {}
 
+  public record Psp(
+      String idPsp,
+      String idBrokerPsp,
+      String idChannel,
+      String psp,
+      String pspPartitaIVA,
+      String pspFiscalCode,
+      String channelDescription) {}
+
   public record PaymentInfo(
       String paymentDateTime,
+      String paymentMethod,
+      String fee,
+      String paymentToken,
       String IUR) {}
 
   public record Properties(

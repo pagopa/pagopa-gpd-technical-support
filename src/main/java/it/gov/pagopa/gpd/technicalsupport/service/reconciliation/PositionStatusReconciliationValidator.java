@@ -1,6 +1,6 @@
 package it.gov.pagopa.gpd.technicalsupport.service.reconciliation;
 
-import it.gov.pagopa.gpd.technicalsupport.config.ReconciliationProperties;
+import it.gov.pagopa.gpd.technicalsupport.config.reconciliation.ReconciliationProperties;
 import it.gov.pagopa.gpd.technicalsupport.exception.AppError;
 import it.gov.pagopa.gpd.technicalsupport.exception.AppException;
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.PositionStatusReconciliationRequest;

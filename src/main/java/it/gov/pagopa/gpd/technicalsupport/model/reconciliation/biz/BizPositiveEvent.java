@@ -8,6 +8,13 @@ public record BizPositiveEvent(
     String iuv,
     String iur,
     String paymentDateTime,
+    String paymentMethod,
+    String fee,
     Long eventTimestamp,
     String eventStatus,
-    String serviceIdentifier) {}
+    String serviceIdentifier,
+    String pspCode,
+    String pspTaxCode,
+    String pspCompany,
+    String idBrokerPsp,
+    String idChannel) {}
