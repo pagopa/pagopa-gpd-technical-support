@@ -4,13 +4,14 @@ import it.gov.pagopa.gpd.technicalsupport.model.gpd.DebtPositionStatus;
 import it.gov.pagopa.gpd.technicalsupport.model.gpd.PaymentOptionStatus;
 import it.gov.pagopa.gpd.technicalsupport.model.gpd.ServiceType;
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.apd.ReconciliationCandidate;
-
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -22,29 +23,29 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class JdbcPaymentOptionCandidateReader implements PaymentOptionCandidateReader {
 
-  /*
-   * Selects APD payment options that are eligible for status reconciliation for a single processing day.
-   *
-   * The query starts from payment_position because the reconciliation run is day-based and the
-   * inserted_date range allows PostgreSQL to reduce the dataset early by using the available date index.
-   * It then joins payment_option through payment_position_id and keeps only unpaid payment options
-   * belonging to debt positions in statuses relevant for reconciliation.
-   *
-   * PARTIALLY_PAID behavior: only unpaid options that belong to an installment
-   * plan must be selected, and only when at least one option in the same plan has already been paid.
-   * For this reason, payment_plan_id must be not null and the EXISTS clause checks for a PO_PAID option
-   * with the same payment_position_id and payment_plan_id. Null payment_plan_id values represent single
-   * payment options, not installment plan branches, and are therefore not considered by this rule.
-   *
-   * This reader intentionally uses a projection-based JDBC query instead of JPA entities. The reconciliation
-   * job only needs a small, read-only subset of columns from very large tables, so avoiding entity
-   * loading, persistence context management, lazy relations and object graph keeps
-   * the query more lighter in memory and easier to tune through SQL execution plan.
-   *
-   * OFFSET pagination is intentionally not used because it becomes increasingly expensive on large tables:
-   * PostgreSQL still has to scan and discard skipped rows. The query is currently executed per bounded day
-   * window.
-   */
+ /*
+  * Selects APD payment options that are eligible for status reconciliation for a single processing day.
+  *
+  * The query starts from payment_position because the reconciliation run is day-based and the
+  * inserted_date range allows PostgreSQL to reduce the dataset early by using the available date index.
+  * It then joins payment_option through payment_position_id and keeps only unpaid payment options
+  * belonging to debt positions in statuses relevant for reconciliation.
+  *
+  * PARTIALLY_PAID behavior: only unpaid options that belong to an installment
+  * plan must be selected, and only when at least one option in the same plan has already been paid.
+  * For this reason, payment_plan_id must be not null and the EXISTS clause checks for a PO_PAID option
+  * with the same payment_position_id and payment_plan_id. Null payment_plan_id values represent single
+  * payment options, not installment plan branches, and are therefore not considered by this rule.
+  *
+  * This reader intentionally uses a projection-based JDBC query instead of JPA entities. The reconciliation 
+  * job only needs a small, read-only subset of columns from very large tables, so avoiding entity
+  * loading, persistence context management, lazy relations and object graph keeps
+  * the query more lighter in memory and easier to tune through SQL execution plan.
+  *
+  * OFFSET pagination is intentionally not used because it becomes increasingly expensive on large tables:
+  * PostgreSQL still has to scan and discard skipped rows. The query is currently executed per bounded day
+  * window.
+  */
   private static final String FIND_CANDIDATES_SQL = """
       SELECT
           pp.inserted_date::date      AS day,
@@ -86,9 +87,11 @@ public class JdbcPaymentOptionCandidateReader implements PaymentOptionCandidateR
   private final NamedParameterJdbcTemplate apdReadReplicaNamedParameterJdbcTemplate;
 
   @Override
-  public List<ReconciliationCandidate> findCandidates(
+  public void forEachCandidateChunk(
       LocalDate day,
-      List<ServiceType> serviceTypes) {
+      List<ServiceType> serviceTypes,
+      int chunkSize,
+      Consumer<List<ReconciliationCandidate>> chunkConsumer) {
 
     LocalDateTime dayStart = day.atStartOfDay();
     LocalDateTime dayEnd = day.plusDays(1).atStartOfDay();
@@ -106,28 +109,65 @@ public class JdbcPaymentOptionCandidateReader implements PaymentOptionCandidateR
             .addValue("serviceTypes", serviceTypeNames);
 
     log.info(
-        "Reading APD reconciliation candidates. day={}, dayStart={}, dayEnd={}, serviceTypes={}",
+        "Reading APD reconciliation candidates by chunks. day={}, dayStart={}, dayEnd={}, serviceTypes={}, chunkSize={}",
         day,
         dayStart,
         dayEnd,
-        serviceTypeNames);
+        serviceTypeNames,
+        chunkSize);
 
-    List<ReconciliationCandidate> candidates =
-        apdReadReplicaNamedParameterJdbcTemplate.query(
-            FIND_CANDIDATES_SQL,
-            params,
-            this::mapCandidate);
+    List<ReconciliationCandidate> chunk = new ArrayList<>(chunkSize);
+    long[] totalCandidates = {0};
+    long[] chunkNumber = {0};
+
+    apdReadReplicaNamedParameterJdbcTemplate.query(
+        FIND_CANDIDATES_SQL,
+        params,
+        rs -> {
+          chunk.add(mapCandidate(rs));
+          totalCandidates[0]++;
+
+          if (chunk.size() >= chunkSize) {
+            chunkNumber[0]++;
+            processChunk(day, serviceTypeNames, chunkNumber[0], chunk, chunkConsumer);
+            chunk.clear();
+          }
+        });
+
+    if (!chunk.isEmpty()) {
+      chunkNumber[0]++;
+      processChunk(day, serviceTypeNames, chunkNumber[0], chunk, chunkConsumer);
+      chunk.clear();
+    }
 
     log.info(
-        "APD reconciliation candidates loaded. day={}, serviceTypes={}, candidates={}",
+        "APD reconciliation candidates fully read. day={}, serviceTypes={}, totalCandidates={}, chunks={}",
         day,
         serviceTypeNames,
-        candidates.size());
-
-    return candidates;
+        totalCandidates[0],
+        chunkNumber[0]);
   }
 
-  private ReconciliationCandidate mapCandidate(ResultSet rs, int rowNum) throws SQLException {
+  private void processChunk(
+      LocalDate day,
+      List<String> serviceTypeNames,
+      long chunkNumber,
+      List<ReconciliationCandidate> chunk,
+      Consumer<List<ReconciliationCandidate>> chunkConsumer) {
+
+    List<ReconciliationCandidate> candidates = List.copyOf(chunk);
+
+    log.info(
+        "APD reconciliation candidate chunk loaded. day={}, serviceTypes={}, chunkNumber={}, chunkSize={}",
+        day,
+        serviceTypeNames,
+        chunkNumber,
+        candidates.size());
+
+    chunkConsumer.accept(candidates);
+  }
+
+  private ReconciliationCandidate mapCandidate(ResultSet rs) throws SQLException {
     return new ReconciliationCandidate(
         rs.getObject("day", LocalDate.class),
         ServiceType.valueOf(rs.getString("service_type")),

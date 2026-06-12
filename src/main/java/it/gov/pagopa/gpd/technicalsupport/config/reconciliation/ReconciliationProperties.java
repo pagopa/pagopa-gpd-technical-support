@@ -14,4 +14,5 @@ public class ReconciliationProperties {
   private int maxProcessingWindowDays = 7;
   private int minProcessingDelayDays = 1;
   private int reportPartitionBuckets = 16;
+  private int candidateChunkSize = 500;
 }
