@@ -18,16 +18,16 @@ public class PositionStatusReconciliationValidator {
   private final Clock clock;
 
   public void validate(PositionStatusReconciliationRequest request) {
-    if (request.to().isBefore(request.from())) {
-      throw new AppException(AppError.BAD_REQUEST, "'to' must be greater than or equal to 'from'");
-    }
+    validateDateRange(request);
 
     long requestedDays = ChronoUnit.DAYS.between(request.from(), request.to()) + 1;
-    if (requestedDays > properties.getMaxProcessingWindowDays()) {
+    int maxProcessingWindowDays = properties.getMaxProcessingWindowDays();
+
+    if (requestedDays > maxProcessingWindowDays) {
       throw new AppException(
           AppError.BAD_REQUEST,
-          "The requested interval exceeds the configured maximum of %d days",
-          properties.getMaxProcessingWindowDays());
+          "The requested interval exceeds the configured maximum of %d days"
+              .formatted(maxProcessingWindowDays));
     }
 
     LocalDate maxProcessableDate =
@@ -36,8 +36,22 @@ public class PositionStatusReconciliationValidator {
     if (request.to().isAfter(maxProcessableDate)) {
       throw new AppException(
           AppError.BAD_REQUEST,
-          "The requested interval is too recent. Maximum processable date is %s",
-          maxProcessableDate);
+          "The requested interval is too recent. Maximum processable date is %s"
+              .formatted(maxProcessableDate));
+    }
+  }
+
+  private void validateDateRange(PositionStatusReconciliationRequest request) {
+    if (request.from() == null) {
+      throw new AppException(AppError.BAD_REQUEST, "'from' is required");
+    }
+
+    if (request.to() == null) {
+      throw new AppException(AppError.BAD_REQUEST, "'to' is required");
+    }
+
+    if (request.to().isBefore(request.from())) {
+      throw new AppException(AppError.BAD_REQUEST, "'to' must be greater than or equal to 'from'");
     }
   }
 }

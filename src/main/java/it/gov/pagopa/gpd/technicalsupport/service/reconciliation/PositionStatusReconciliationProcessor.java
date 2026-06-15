@@ -18,6 +18,8 @@ import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -65,79 +67,97 @@ public class PositionStatusReconciliationProcessor {
   }
 
   private void processChunk(
-      ReconciliationRunCreationResult run,
-      List<ReconciliationCandidate> candidates,
-      ReconciliationCounterAccumulator accumulator) {
+		  ReconciliationRunCreationResult run,
+		  List<ReconciliationCandidate> candidates,
+		  ReconciliationCounterAccumulator accumulator) {
 
-    log.info(
-        "Processing APD reconciliation candidate chunk. logicalRunKey={}, executionId={}, chunkSize={}",
-        run.logicalRunKey(),
-        run.executionId(),
-        candidates.size());
+	  long startTime = System.currentTimeMillis();
 
-    for (ReconciliationCandidate candidate : candidates) {
-      ReconciliationCandidateProcessingResult result = processCandidate(run, candidate);
-      accumulator.add(result);
-    }
+	  log.info(
+			  "Processing APD reconciliation candidate chunk. logicalRunKey={}, executionId={}, chunkSize={}",
+			  run.logicalRunKey(),
+			  run.executionId(),
+			  candidates.size());
+
+	  Map<String, BizPositiveEventLookupResult> lookupResults =
+			  bizPositiveEventLookup.findPositiveEvents(candidates);
+
+	  for (ReconciliationCandidate candidate : candidates) {
+		  BizPositiveEventLookupResult lookupResult =
+				  lookupResults.getOrDefault(
+						  BizPositiveEventLookup.key(candidate),
+						  BizPositiveEventLookupResult.notFound());
+
+		  ReconciliationCandidateProcessingResult result =
+				  processCandidate(run, candidate, lookupResult);
+
+		  accumulator.add(result);
+	  }
+
+	  log.info(
+			  "Processed APD reconciliation candidate chunk. logicalRunKey={}, executionId={}, chunkSize={}, lookupResults={}, durationMs={}",
+			  run.logicalRunKey(),
+			  run.executionId(),
+			  candidates.size(),
+			  lookupResults.size(),
+			  System.currentTimeMillis() - startTime);
   }
 
   private ReconciliationCandidateProcessingResult processCandidate(
-      ReconciliationRunCreationResult run,
-      ReconciliationCandidate candidate) {
+		  ReconciliationRunCreationResult run,
+		  ReconciliationCandidate candidate,
+		  BizPositiveEventLookupResult lookupResult) {
 
-    BizPositiveEventLookupResult lookupResult =
-        bizPositiveEventLookup.findPositiveEvent(candidate);
+	  if (lookupResult.status() == BizPositiveEventLookupStatus.NOT_FOUND) {
+		  return ReconciliationCandidateProcessingResult.forNotFound();
+	  }
 
-    if (lookupResult.status() == BizPositiveEventLookupStatus.NOT_FOUND) {
-      return ReconciliationCandidateProcessingResult.forNotFound();
-    }
+	  if (lookupResult.status() == BizPositiveEventLookupStatus.FAILED) {
+		  ReconciliationReportDocument report =
+				  reportMapper.technicalFailureReport(
+						  run.executionId(),
+						  run.logicalRunKey(),
+						  candidate,
+						  lookupResult.errorCode(),
+						  lookupResult.errorMessage(),
+						  nowUtc());
 
-    if (lookupResult.status() == BizPositiveEventLookupStatus.FAILED) {
-      ReconciliationReportDocument report =
-          reportMapper.technicalFailureReport(
-              run.executionId(),
-              run.logicalRunKey(),
-              candidate,
-              lookupResult.errorCode(),
-              lookupResult.errorMessage(),
-              nowUtc());
+		  reportStore.save(report);
 
-      reportStore.save(report);
+		  return ReconciliationCandidateProcessingResult.forTechnicalFailure();
+	  }
 
-      return ReconciliationCandidateProcessingResult.forTechnicalFailure();
-    }
+	  if (candidate.ppStatus() == DebtPositionStatus.EXPIRED) {
+		  ReconciliationReportDocument report =
+				  reportMapper.manualRequiredReport(
+						  run.executionId(),
+						  run.logicalRunKey(),
+						  candidate,
+						  lookupResult.event(),
+						  ReconciliationOutcome.POSITIVE_EVENT_FOUND_EXPIRED_MANUAL_REQUIRED,
+						  nowUtc());
 
-    if (candidate.ppStatus() == DebtPositionStatus.EXPIRED) {
-      ReconciliationReportDocument report =
-          reportMapper.manualRequiredReport(
-              run.executionId(),
-              run.logicalRunKey(),
-              candidate,
-              lookupResult.event(),
-              ReconciliationOutcome.POSITIVE_EVENT_FOUND_EXPIRED_MANUAL_REQUIRED,
-              nowUtc());
+		  reportStore.save(report);
 
-      reportStore.save(report);
+		  return ReconciliationCandidateProcessingResult.forManualRequired();
+	  }
 
-      return ReconciliationCandidateProcessingResult.forManualRequired();
-    }
+	  if (candidate.ppStatus() == DebtPositionStatus.INVALID) {
+		  ReconciliationReportDocument report =
+				  reportMapper.manualRequiredReport(
+						  run.executionId(),
+						  run.logicalRunKey(),
+						  candidate,
+						  lookupResult.event(),
+						  ReconciliationOutcome.POSITIVE_EVENT_FOUND_INVALID_MANUAL_REQUIRED,
+						  nowUtc());
 
-    if (candidate.ppStatus() == DebtPositionStatus.INVALID) {
-      ReconciliationReportDocument report =
-          reportMapper.manualRequiredReport(
-              run.executionId(),
-              run.logicalRunKey(),
-              candidate,
-              lookupResult.event(),
-              ReconciliationOutcome.POSITIVE_EVENT_FOUND_INVALID_MANUAL_REQUIRED,
-              nowUtc());
+		  reportStore.save(report);
 
-      reportStore.save(report);
+		  return ReconciliationCandidateProcessingResult.forManualRequired();
+	  }
 
-      return ReconciliationCandidateProcessingResult.forManualRequired();
-    }
-
-    return executePayRecovery(run, candidate, lookupResult);
+	  return executePayRecovery(run, candidate, lookupResult);
   }
 
   private ReconciliationCandidateProcessingResult executePayRecovery(
