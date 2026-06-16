@@ -243,7 +243,7 @@ public class PositionStatusReconciliationProcessor {
       long payExecuted,
       long payFailed) {
 
-    private static final long SCANNED = 1L;
+    private static final long INITIAL_SCAN_COUNT = 1L;
 
     static ReconciliationCandidateProcessingResult forNotFound() {
       return fromFlags(false, false, false, false, false, false);
@@ -274,7 +274,7 @@ public class PositionStatusReconciliationProcessor {
         boolean payFailed) {
 
       return new ReconciliationCandidateProcessingResult(
-          SCANNED,
+          INITIAL_SCAN_COUNT,
           counter(positiveEventFound),
           counter(recovered),
           counter(manualRequired),
