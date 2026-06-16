@@ -1,10 +1,10 @@
 microservice-chart:
-  namespace: "your-namespace" # TODO: set your AKS namespace
+  namespace: "gps"
   nameOverride: ""
   fullnameOverride: ""
   image:
-    repository: ghcr.io/pagopa/yourname # TODO
-    tag: "0.0.0"
+    repository: ghcr.io/pagopa/pagopa-gpd-technical-support
+    tag: "0.1.0"
     pullPolicy: Always
   livenessProbe:
     handlerType: httpGet
@@ -32,11 +32,11 @@ microservice-chart:
       - 8080
   ingress:
     create: true
-    host: "your.host" # TODO: set the host
-    path: /your-path-here/(.*) # TODO: set your path
+    host: "weudev.gps.internal.dev.platform.pagopa.it"
+    path: /gpd-technical-support/(.*)
     servicePort: 8080
   serviceAccount:
-    name: "<namespace>-workload-identity" # TODO: set namespace for workload identity
+    name: "gps-workload-identity"
   azure:
     workloadIdentityClientId: <workload-identity-client-id-set-automatically-by-gha>
   podAnnotations: { }
@@ -59,7 +59,7 @@ microservice-chart:
   autoscaling:
     enable: true
     minReplica: 1
-    maxReplica: 10
+    maxReplica: 1
     pollingInterval: 10 # seconds
     cooldownPeriod: 50 # seconds
     triggers:
@@ -69,27 +69,48 @@ microservice-chart:
           type: Utilization # Allowed types are 'Utilization' or 'AverageValue'
           value: "75"
   envConfig:
-    APP_NAME: "yourProjectName" # TODO
+    APP_NAME: "pagopa-gpd-technical-support"
     APP_ENVIRONMENT: "dev"
-    # TODO: set your name
-    WEBSITE_SITE_NAME: 'yourProjectName' # required to show cloud role name in application insights
-    APP_LOGGING_LEVEL: 'DEBUG'
-    DEFAULT_LOGGING_LEVEL: 'INFO'
+    WEBSITE_SITE_NAME: "pagopa-gpd-technical-support"
     CORS_CONFIGURATION: '{"origins": ["*"], "methods": ["*"]}'
-
-    OTEL_SERVICE_NAME: # TODO
+    DEFAULT_LOGGING_LEVEL: "INFO"
+    APP_LOGGING_LEVEL: "INFO"
+    RECONCILIATION_MAX_PROCESSING_WINDOW_DAYS: "7"
+    RECONCILIATION_MIN_PROCESSING_DELAY_DAYS: "1"
+    RECONCILIATION_REPORT_PARTITION_BUCKETS: "16"
+    RECONCILIATION_CANDIDATE_CHUNK_SIZE: "500"
+    RECONCILIATION_COSMOS_DATABASE_NAME: "gpd_db"
+    RECONCILIATION_COSMOS_RUNS_CONTAINER_NAME: "gpd-reconciliation-runs"
+    RECONCILIATION_COSMOS_REPORTS_CONTAINER_NAME: "gpd-reconciliation-reports"
+    RECONCILIATION_COSMOS_USE_MANAGED_IDENTITY: "false"
+    RECONCILIATION_APD_MAXIMUM_POOL_SIZE: "5"
+    RECONCILIATION_APD_MINIMUM_IDLE: "1"
+    RECONCILIATION_APD_CONNECTION_TIMEOUT_MS: "30000"
+    RECONCILIATION_BIZ_COSMOS_DATABASE_NAME: "db"
+    RECONCILIATION_BIZ_COSMOS_CONTAINER_NAME: "biz-events"
+    RECONCILIATION_BIZ_COSMOS_USE_MANAGED_IDENTITY: "false"
+    RECONCILIATION_COSMOS_ENDPOINT: "https://pagopa-d-weu-gps-cosmos-account.documents.azure.com:443/"
+    RECONCILIATION_BIZ_COSMOS_ENDPOINT: "https://pagopa-d-weu-bizevents-ds-cosmos-account.documents.azure.com:443/"
+    RECONCILIATION_GPD_PAY_BASE_URL: "https://api.dev.platform.pagopa.it/gpd/api/v1"
+    RECONCILIATION_APD_JDBC_URL: "jdbc:postgresql://gpd-db.d.internal.postgresql.pagopa.it:5432/apd?sslmode=require&prepareThreshold=0&tcpKeepAlive=true"
+    OTEL_SERVICE_NAME: "pagopa-gpd-technical-support"
     OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=dev"
     OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.elastic-system.svc:4317"
-    OTEL_TRACES_EXPORTER: otlp
-    OTEL_METRICS_EXPORTER: otlp
-    OTEL_LOGS_EXPORTER: none
+    OTEL_TRACES_EXPORTER: "otlp"
+    OTEL_METRICS_EXPORTER: "otlp"
+    OTEL_LOGS_EXPORTER: "none"
     OTEL_TRACES_SAMPLER: "always_on"
   envSecret:
+    RECONCILIATION_APD_USERNAME: "db-apd-user-name"
+    RECONCILIATION_APD_PASSWORD: "db-apd-user-password"
+    RECONCILIATION_GPD_PAY_API_KEY: "technical-support-d-gpd-core-subscription-key"
+    RECONCILIATION_COSMOS_KEY: "technical-support-d-cosmos-key"
+    RECONCILIATION_BIZ_COSMOS_KEY: "technical-support-d-biz-cosmos-key"
     # required
     APPLICATIONINSIGHTS_CONNECTION_STRING: 'app-insight-connection-string'
     OTEL_EXPORTER_OTLP_HEADERS: elastic-apm-secret-token
   keyvault:
-    name: "pagopa-d-name-kv" #TODO
+    name: "pagopa-d-gps-kv"
     tenantId: "7788edaf-0346-4068-9d79-c868aed15b3d"
   nodeSelector: { }
   tolerations: [ ]
