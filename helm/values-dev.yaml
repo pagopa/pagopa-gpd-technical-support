@@ -92,7 +92,6 @@ microservice-chart:
     RECONCILIATION_COSMOS_ENDPOINT: "https://pagopa-d-weu-gps-cosmos-account.documents.azure.com:443/"
     RECONCILIATION_BIZ_COSMOS_ENDPOINT: "https://pagopa-d-weu-bizevents-ds-cosmos-account.documents.azure.com:443/"
     RECONCILIATION_GPD_PAY_BASE_URL: "https://api.dev.platform.pagopa.it/gpd/api/v1"
-    RECONCILIATION_APD_JDBC_URL: "jdbc:postgresql://gpd-db.d.internal.postgresql.pagopa.it:5432/apd?sslmode=require&prepareThreshold=0&tcpKeepAlive=true"
     OTEL_SERVICE_NAME: "pagopa-gpd-technical-support"
     OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=dev"
     OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.elastic-system.svc:4317"
@@ -101,11 +100,12 @@ microservice-chart:
     OTEL_LOGS_EXPORTER: "none"
     OTEL_TRACES_SAMPLER: "always_on"
   envSecret:
-    RECONCILIATION_APD_USERNAME: "db-apd-user-name"
-    RECONCILIATION_APD_PASSWORD: "db-apd-user-password"
-    RECONCILIATION_GPD_PAY_API_KEY: "technical-support-d-gpd-core-subscription-key"
-    RECONCILIATION_COSMOS_KEY: "technical-support-d-cosmos-key"
-    RECONCILIATION_BIZ_COSMOS_KEY: "technical-support-d-biz-cosmos-key"
+    RECONCILIATION_APD_JDBC_URL: "gpd-technical-support-apd-jdbc-url"
+    RECONCILIATION_APD_USERNAME: "pgres-gpd-technical-support-user-login"
+    RECONCILIATION_APD_PASSWORD: "pgres-gpd-technical-support-user-pwd"
+    RECONCILIATION_COSMOS_KEY: "gpd-technical-support-reconciliation-cosmos-key"
+    RECONCILIATION_BIZ_COSMOS_KEY: "gpd-technical-support-biz-cosmos-key"
+    RECONCILIATION_GPD_PAY_API_KEY: "gpd-technical-support-gpd-pay-subkey"
     # required
     APPLICATIONINSIGHTS_CONNECTION_STRING: 'app-insight-connection-string'
     OTEL_EXPORTER_OTLP_HEADERS: elastic-apm-secret-token
