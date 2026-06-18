@@ -1,5 +1,7 @@
 package it.gov.pagopa.gpd.technicalsupport.config;
 
+import static it.gov.pagopa.gpd.technicalsupport.util.Constants.HEADER_REQUEST_ID;
+
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Paths;
@@ -10,11 +12,6 @@ import io.swagger.v3.oas.models.parameters.Parameter;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
-import io.swagger.v3.oas.models.servers.ServerVariable;
-import io.swagger.v3.oas.models.servers.ServerVariables;
-
-import static it.gov.pagopa.gpd.technicalsupport.util.Constants.HEADER_REQUEST_ID;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -37,17 +34,18 @@ public class OpenApiConfig {
     return new OpenAPI()
         .servers(
             List.of(
-                new Server().url("http://localhost:8080"),
                 new Server()
-                    .url("https://api.{environment}.platform.pagopa.it/gpd-technical-support")
-                    .variables(
-                        new ServerVariables()
-                            .addServerVariable(
-                                "environment",
-                                new ServerVariable()
-                                    ._enum(List.of("dev", "uat"))
-                                    ._default("dev"))),
-                new Server().url("https://api.platform.pagopa.it/gpd-technical-support")))
+                    .url("http://localhost:8080")
+                    .description("Local"),
+                new Server()
+                    .url("https://api.dev.platform.pagopa.it/gpd-technical-support")
+                    .description("DEV"),
+                new Server()
+                    .url("https://api.uat.platform.pagopa.it/gpd-technical-support")
+                    .description("UAT"),
+                new Server()
+                    .url("https://api.platform.pagopa.it/gpd-technical-support")
+                    .description("PROD")))
         .components(
             new Components()
                 .addSecuritySchemes(
@@ -111,6 +109,7 @@ public class OpenApiConfig {
                           .parallelStream()
                           .filter(Objects::nonNull)
                           .anyMatch(elem -> HEADER_REQUEST_ID.equals(elem.getName()));
+
                   if (!header) {
                     value.addParametersItem(
                         new Parameter()
