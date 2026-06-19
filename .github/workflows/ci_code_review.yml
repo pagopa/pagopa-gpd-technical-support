@@ -18,7 +18,7 @@ on:
   workflow_dispatch:
 
 env:
-  PROJECT_KEY: pagopa-gpd-technical-support
+  PROJECT_KEY: pagopa_pagopa-gpd-technical-support
 
 permissions:
   id-token: write
