@@ -355,6 +355,100 @@ class PositionStatusReconciliationProcessorTest {
     verify(bizPositiveEventLookup, never()).findPositiveEvent(Mockito.any());
     verify(reportStore, Mockito.times(3)).save(Mockito.any(ReconciliationReportDocument.class));
   }
+  
+  @Test
+  void process_shouldExecutePayRecoveryForPartiallyPaidPositionWhenPositiveEventIsFound() {
+    ReconciliationRunCreationResult run = run();
+    ReconciliationCandidate candidate = candidate(DebtPositionStatus.PARTIALLY_PAID);
+    BizPositiveEvent event = bizPositiveEvent(candidate);
+
+    mockCandidateReader(run, List.of(candidate));
+
+    when(bizPositiveEventLookup.findPositiveEvents(List.of(candidate)))
+        .thenReturn(
+            Map.of(
+                BizPositiveEventLookup.key(candidate),
+                BizPositiveEventLookupResult.found(event)));
+
+    when(gpdPayClient.executePayRecovery(candidate, event))
+        .thenReturn(GpdPayRecoveryResult.success());
+
+    ReconciliationCounters counters = processor.process(run);
+
+    assertThat(counters.scanned()).isEqualTo(1);
+    assertThat(counters.positiveEventsFound()).isEqualTo(1);
+    assertThat(counters.reconciliationCases()).isEqualTo(1);
+    assertThat(counters.recovered()).isEqualTo(1);
+    assertThat(counters.manualRequired()).isZero();
+    assertThat(counters.technicalFailures()).isZero();
+    assertThat(counters.payExecuted()).isEqualTo(1);
+    assertThat(counters.payFailed()).isZero();
+    assertThat(counters.notRecovered()).isZero();
+
+    verifyCandidateReaderCalled(run);
+    verify(bizPositiveEventLookup).findPositiveEvents(List.of(candidate));
+    verify(bizPositiveEventLookup, never()).findPositiveEvent(Mockito.any());
+    verify(gpdPayClient).executePayRecovery(candidate, event);
+    verify(reportStore).save(Mockito.any(ReconciliationReportDocument.class));
+  }
+  
+  @Test
+  void process_shouldReturnEmptyCountersWhenReaderDoesNotProduceAnyChunk() {
+    ReconciliationRunCreationResult run = run();
+
+    mockCandidateReaderChunks(run);
+
+    ReconciliationCounters counters = processor.process(run);
+
+    assertThat(counters.scanned()).isZero();
+    assertThat(counters.positiveEventsFound()).isZero();
+    assertThat(counters.reconciliationCases()).isZero();
+    assertThat(counters.recovered()).isZero();
+    assertThat(counters.manualRequired()).isZero();
+    assertThat(counters.technicalFailures()).isZero();
+    assertThat(counters.payExecuted()).isZero();
+    assertThat(counters.payFailed()).isZero();
+    assertThat(counters.notRecovered()).isZero();
+
+    verifyCandidateReaderCalled(run);
+    verify(bizPositiveEventLookup, never()).findPositiveEvents(Mockito.anyList());
+    verify(bizPositiveEventLookup, never()).findPositiveEvent(Mockito.any());
+    verify(gpdPayClient, never()).executePayRecovery(Mockito.any(), Mockito.any());
+    verify(reportStore, never()).save(Mockito.any());
+  }
+  
+  @Test
+  void process_shouldTreatLookupResultWithDifferentKeyAsNotFound() {
+    ReconciliationRunCreationResult run = run();
+    ReconciliationCandidate candidate = candidate();
+    BizPositiveEvent event = bizPositiveEvent(candidate);
+
+    mockCandidateReader(run, List.of(candidate));
+
+    when(bizPositiveEventLookup.findPositiveEvents(List.of(candidate)))
+        .thenReturn(
+            Map.of(
+                "different-ec__different-nav",
+                BizPositiveEventLookupResult.found(event)));
+
+    ReconciliationCounters counters = processor.process(run);
+
+    assertThat(counters.scanned()).isEqualTo(1);
+    assertThat(counters.positiveEventsFound()).isZero();
+    assertThat(counters.reconciliationCases()).isZero();
+    assertThat(counters.recovered()).isZero();
+    assertThat(counters.manualRequired()).isZero();
+    assertThat(counters.technicalFailures()).isZero();
+    assertThat(counters.payExecuted()).isZero();
+    assertThat(counters.payFailed()).isZero();
+    assertThat(counters.notRecovered()).isZero();
+
+    verifyCandidateReaderCalled(run);
+    verify(bizPositiveEventLookup).findPositiveEvents(List.of(candidate));
+    verify(bizPositiveEventLookup, never()).findPositiveEvent(Mockito.any());
+    verify(gpdPayClient, never()).executePayRecovery(Mockito.any(), Mockito.any());
+    verify(reportStore, never()).save(Mockito.any());
+  }
 
   private ReconciliationProperties reconciliationProperties() {
     ReconciliationProperties prop = new ReconciliationProperties();
