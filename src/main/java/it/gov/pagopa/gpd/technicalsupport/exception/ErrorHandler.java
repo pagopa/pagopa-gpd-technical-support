@@ -42,14 +42,16 @@ public class ErrorHandler extends ResponseEntityExceptionHandler {
 	 *         HTTP status
 	 */
 	@Override
-	public @Nullable ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex,
+	public ResponseEntity<@Nullable Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex,
 			HttpHeaders headers, HttpStatusCode status, WebRequest request) {
 
 		log.warn("Input not readable: ", ex);
+
 		ProblemJson errorResponse = ProblemJson.builder().status(HttpStatus.BAD_REQUEST.value())
 				.title(AppError.BAD_REQUEST.getTitle()).detail("Invalid input format").build();
 
 		return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+
 	}
 
 	/**
@@ -65,11 +67,12 @@ public class ErrorHandler extends ResponseEntityExceptionHandler {
 	 *         HTTP status
 	 */
 	@Override
-	public @Nullable ResponseEntity<Object> handleMissingServletRequestParameter(
+	public ResponseEntity<@Nullable Object> handleMissingServletRequestParameter(
 			MissingServletRequestParameterException ex, HttpHeaders headers, HttpStatusCode status,
 			WebRequest request) {
 
 		log.warn("Missing request parameter: ", ex);
+
 		ProblemJson errorResponse = ProblemJson.builder().status(HttpStatus.BAD_REQUEST.value())
 				.title(AppError.BAD_REQUEST.getTitle()).detail(ex.getMessage()).build();
 
@@ -88,7 +91,7 @@ public class ErrorHandler extends ResponseEntityExceptionHandler {
 	 * @return a {@code ResponseEntity} instance
 	 */
 	@Override
-	protected @Nullable ResponseEntity<Object> handleTypeMismatch(TypeMismatchException ex, HttpHeaders headers,
+	protected ResponseEntity<@Nullable Object> handleTypeMismatch(TypeMismatchException ex, HttpHeaders headers,
 			HttpStatusCode status, WebRequest request) {
 
 		log.warn("Type mismatch: ", ex);
@@ -117,7 +120,7 @@ public class ErrorHandler extends ResponseEntityExceptionHandler {
 	 *         HTTP status
 	 */
 	@Override
-	protected @Nullable ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
+	protected ResponseEntity<@Nullable Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
 			HttpHeaders headers, HttpStatusCode status, WebRequest request) {
 
 		List<String> details = new ArrayList<>();
@@ -134,6 +137,7 @@ public class ErrorHandler extends ResponseEntityExceptionHandler {
 				.title(AppError.BAD_REQUEST.getTitle()).detail(detailsMessage).build();
 
 		return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+
 	}
 
 	@ExceptionHandler({ jakarta.validation.ConstraintViolationException.class })
@@ -146,6 +150,7 @@ public class ErrorHandler extends ResponseEntityExceptionHandler {
 				.title(AppError.BAD_REQUEST.getTitle()).detail(ex.getMessage()).build();
 
 		return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+
 	}
 
 	/**
@@ -180,6 +185,7 @@ public class ErrorHandler extends ResponseEntityExceptionHandler {
 		}
 
 		return new ResponseEntity<>(problem, HttpStatus.valueOf(problem.getStatus()));
+
 	}
 
 	/**
@@ -205,6 +211,7 @@ public class ErrorHandler extends ResponseEntityExceptionHandler {
 				.detail(ex.getMessage()).build();
 
 		return new ResponseEntity<>(errorResponse, ex.getHttpStatus());
+
 	}
 
 	/**
@@ -225,6 +232,7 @@ public class ErrorHandler extends ResponseEntityExceptionHandler {
 				.title(AppError.INTERNAL_SERVER_ERROR.getTitle()).detail(ex.getMessage()).build();
 
 		return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+
 	}
 
 	private static String byteBufferToString(ByteBuffer byteBuffer) {
