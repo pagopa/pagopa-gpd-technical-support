@@ -4,7 +4,7 @@ microservice-chart:
   fullnameOverride: ""
   image:
     repository: ghcr.io/pagopa/yourname # TODO
-    tag: "0.0.0"
+    tag: "0.0.1-1-PIDM-1995-debt-positions-status-reconciliation"
     pullPolicy: Always
   livenessProbe:
     handlerType: httpGet
@@ -38,7 +38,7 @@ microservice-chart:
     name: "<namespace>-workload-identity" # TODO: set namespace for workload identity
   azure:
     workloadIdentityClientId: <workload-identity-client-id-set-automatically-by-gha>
-  podAnnotations: { }
+  podAnnotations: {}
   podSecurityContext:
     seccompProfile:
       type: RuntimeDefault
@@ -75,7 +75,6 @@ microservice-chart:
     APP_LOGGING_LEVEL: 'INFO'
     DEFAULT_LOGGING_LEVEL: 'INFO'
     CORS_CONFIGURATION: '{"origins": ["*"], "methods": ["*"]}'
-
     OTEL_SERVICE_NAME: # TODO
     OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=prod"
     OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.elastic-system.svc:4317"
@@ -90,8 +89,8 @@ microservice-chart:
   keyvault:
     name: "pagopa-p-name-kv" #TODO
     tenantId: "7788edaf-0346-4068-9d79-c868aed15b3d"
-  nodeSelector: { }
-  tolerations: [ ]
+  nodeSelector: {}
+  tolerations: []
   affinity:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -112,6 +111,5 @@ microservice-chart:
       repository: ghcr.io/pagopa/pagopa-gpd-technical-support
       tag: "0.1.0"
       pullPolicy: Always
-    envConfig: { }
-    envSecret: { }
-
+    envConfig: {}
+    envSecret: {}
