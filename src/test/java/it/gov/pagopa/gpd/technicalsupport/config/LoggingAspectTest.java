@@ -1,6 +1,7 @@
 package it.gov.pagopa.gpd.technicalsupport.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -235,7 +236,7 @@ class LoggingAspectTest {
 
   @Test
   void logStartup_shouldNotThrowException() {
-    loggingAspect.logStartup();
+    assertThatNoException().isThrownBy(loggingAspect::logStartup);
   }
 
   private ProceedingJoinPoint joinPoint(
