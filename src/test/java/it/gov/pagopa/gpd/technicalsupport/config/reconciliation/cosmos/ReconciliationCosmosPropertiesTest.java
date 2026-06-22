@@ -4,8 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-import it.gov.pagopa.gpd.technicalsupport.config.reconciliation.cosmos.ReconciliationCosmosProperties;
-
 class ReconciliationCosmosPropertiesTest {
 
   @Test

@@ -32,8 +32,9 @@ class ReconciliationReportKeyBuilderTest {
     int firstBucket = keyBuilder.bucket("12345678901", "302012345678901234");
     int secondBucket = keyBuilder.bucket("12345678901", "302012345678901234");
 
-    assertThat(firstBucket).isEqualTo(secondBucket);
-    assertThat(firstBucket).isBetween(0, 15);
+    assertThat(firstBucket)
+        .isEqualTo(secondBucket)
+        .isBetween(0, 15);
   }
 
   @Test

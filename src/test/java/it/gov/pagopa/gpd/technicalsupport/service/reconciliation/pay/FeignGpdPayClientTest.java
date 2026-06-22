@@ -102,10 +102,10 @@ class FeignGpdPayClientTest {
   }
 
   private GpdPayProperties gpdPayProperties() {
-    GpdPayProperties properties = new GpdPayProperties();
-    properties.setBaseUrl("http://localhost");
-    properties.setApiKey("test-api-key");
-    return properties;
+    GpdPayProperties prop = new GpdPayProperties();
+    prop.setBaseUrl("http://localhost");
+    prop.setApiKey("test-api-key");
+    return prop;
   }
 
   private ReconciliationCandidate candidate() {

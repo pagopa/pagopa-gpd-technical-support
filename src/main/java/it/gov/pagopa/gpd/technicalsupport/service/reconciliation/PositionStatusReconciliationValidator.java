@@ -42,16 +42,10 @@ public class PositionStatusReconciliationValidator {
   }
 
   private void validateDateRange(PositionStatusReconciliationRequest request) {
-    if (request.from() == null) {
-      throw new AppException(AppError.BAD_REQUEST, "'from' is required");
-    }
-
-    if (request.to() == null) {
-      throw new AppException(AppError.BAD_REQUEST, "'to' is required");
-    }
-
     if (request.to().isBefore(request.from())) {
-      throw new AppException(AppError.BAD_REQUEST, "'to' must be greater than or equal to 'from'");
+      throw new AppException(
+          AppError.BAD_REQUEST,
+          "'to' must be greater than or equal to 'from'");
     }
   }
 }
