@@ -4,7 +4,7 @@ microservice-chart:
   fullnameOverride: ""
   image:
     repository: ghcr.io/pagopa/pagopa-gpd-technical-support
-    tag: "0.1.0"
+    tag: "0.0.1-1-PIDM-1995-debt-positions-status-reconciliation"
     pullPolicy: Always
   livenessProbe:
     handlerType: httpGet
@@ -39,7 +39,7 @@ microservice-chart:
     name: "gps-workload-identity"
   azure:
     workloadIdentityClientId: <workload-identity-client-id-set-automatically-by-gha>
-  podAnnotations: { }
+  podAnnotations: {}
   podSecurityContext:
     seccompProfile:
       type: RuntimeDefault
@@ -112,8 +112,8 @@ microservice-chart:
   keyvault:
     name: "pagopa-u-gps-kv"
     tenantId: "7788edaf-0346-4068-9d79-c868aed15b3d"
-  nodeSelector: { }
-  tolerations: [ ]
+  nodeSelector: {}
+  tolerations: []
   affinity:
     nodeAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -134,6 +134,5 @@ microservice-chart:
       repository: ghcr.io/pagopa/pagopa-gpd-technical-support
       tag: "0.1.0"
       pullPolicy: Always
-    envConfig: { }
-    envSecret: { }
-
+    envConfig: {}
+    envSecret: {}
