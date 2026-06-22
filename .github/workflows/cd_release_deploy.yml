@@ -30,9 +30,11 @@ on:
         description: Select the version
         options:
           - patch
+          - buildNumber
           - skip_or_promote
           - new_release
           - breaking_change
+        default: patch 
       is_canary:
         type: boolean
         description: 'Mark the release as canary on AKS'
@@ -88,6 +90,9 @@ jobs:
 
       - if: ${{ inputs.version == 'breaking_change' }}
         run: echo "SEMVER=major" >> $GITHUB_ENV
+        
+      - if: ${{ inputs.version == 'buildNumber' }} 
+        run: echo "SEMVER=buildNumber" >> $GITHUB_ENV
 
       - if: ${{ github.ref_name != 'main' }}
         run: echo "SEMVER=buildNumber" >> $GITHUB_ENV
