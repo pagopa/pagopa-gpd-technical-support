@@ -2,8 +2,6 @@ name: Release And Deploy
 
 # Controls when the workflow will run
 on:
-  merge_group:
-    branches: [ main ]
   pull_request:
     branches:
       - main
@@ -72,16 +70,16 @@ jobs:
       # Set Semvar
       - run: echo "SEMVER=patch" >> $GITHUB_ENV
 
-      - if: ${{ (github.event.pull_request.merged && contains(github.event.pull_request.labels.*.name, 'skip')) }}
+      - if: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged && contains(github.event.pull_request.labels.*.name, 'skip') }}
         run: echo "SEMVER=skip" >> $GITHUB_ENV
 
-      - if: ${{ (github.event.pull_request.merged && contains(github.event.pull_request.labels.*.name, 'patch')) }}
+      - if: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged && contains(github.event.pull_request.labels.*.name, 'patch') }}
         run: echo "SEMVER=patch" >> $GITHUB_ENV
 
-      - if: ${{ (github.event.pull_request.merged && contains(github.event.pull_request.labels.*.name, 'minor')) }}
+      - if: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged && contains(github.event.pull_request.labels.*.name, 'minor') }}
         run: echo "SEMVER=minor" >> $GITHUB_ENV
 
-      - if: ${{ (github.event.pull_request.merged && contains(github.event.pull_request.labels.*.name, 'major')) }}
+      - if: ${{ github.event_name == 'pull_request' && github.event.pull_request.merged && contains(github.event.pull_request.labels.*.name, 'major') }}
         run: echo "SEMVER=major" >> $GITHUB_ENV
 
       # force semver if dev, !=main or skip release
@@ -102,14 +100,14 @@ jobs:
         run: echo "semver=${{env.SEMVER}}" >> $GITHUB_OUTPUT
 
       # Set Environment
-      - run: echo "ENVIRNOMENT=${{ inputs.environment}}" >> $GITHUB_ENV
+      - run: echo "ENVIRONMENT=${{ inputs.environment}}" >> $GITHUB_ENV
 
       - if: ${{ inputs.environment == null }}
-        run: echo "ENVIRNOMENT=dev" >> $GITHUB_ENV
+        run: echo "ENVIRONMENT=dev" >> $GITHUB_ENV
 
       - id: get_env
         name: Set Output
-        run: echo "environment=${{env.ENVIRNOMENT}}" >> $GITHUB_OUTPUT
+        run: echo "environment=${{env.ENVIRONMENT}}" >> $GITHUB_OUTPUT
 
   release:
     name: Create a New Release
@@ -125,7 +123,7 @@ jobs:
         with:
           semver: ${{ needs.setup.outputs.semver }}
           github_token: ${{ secrets.BOT_TOKEN_GITHUB }}
-          beta: ${{ inputs.is_canary }}
+          beta: ${{ inputs.beta || inputs.is_canary }}
           skip_ci: false
 
   image:
@@ -138,12 +136,12 @@ jobs:
         id: semver
         uses: pagopa/github-actions-template/ghcr-build-push@d91a1fd0b913c9830589be5d86cdb71c90813fae # v1.5.4
         with:
-          branch: ${{ github.ref_name}}
+          branch: ${{ github.ref_name }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ needs.release.outputs.version }}
 
   deploy_aks:
-    name: Deploy on AKS ${{needs.setup.outputs.environment}}
+    name: Deploy on AKS ${{ needs.setup.outputs.environment }}
     needs: [ setup, release, image ]
     if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
     uses: ./.github/workflows/cd_deploy_with_github_runner.yml
@@ -151,7 +149,11 @@ jobs:
       environment: ${{ needs.setup.outputs.environment }}
       suffix_name: ${{ inputs.is_canary && '-canary' || '' }}
       is_canary: ${{ inputs.is_canary }}
-    secrets: inherit
+      traffic_weight: ${{ inputs.traffic_weight }}
+    secrets:
+      CLIENT_ID: ${{ secrets.CLIENT_ID }}
+      TENANT_ID: ${{ secrets.TENANT_ID }}
+      SUBSCRIPTION_ID: ${{ secrets.SUBSCRIPTION_ID }}
 
   notify:
     needs: [ setup, release, deploy_aks ]
