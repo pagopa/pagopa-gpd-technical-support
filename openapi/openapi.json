@@ -7,17 +7,17 @@
     "version" : "0.0.1-SNAPSHOT"
   },
   "servers" : [ {
-    "url" : "http://localhost:8080"
+    "url" : "http://localhost:8080",
+    "description" : "Local"
   }, {
-    "url" : "https://api.{environment}.platform.pagopa.it/gpd-technical-support",
-    "variables" : {
-      "environment" : {
-        "default" : "dev",
-        "enum" : [ "dev", "uat" ]
-      }
-    }
+    "url" : "https://api.dev.platform.pagopa.it/gpd-technical-support",
+    "description" : "DEV"
   }, {
-    "url" : "https://api.platform.pagopa.it/gpd-technical-support"
+    "url" : "https://api.uat.platform.pagopa.it/gpd-technical-support",
+    "description" : "UAT"
+  }, {
+    "url" : "https://api.platform.pagopa.it/gpd-technical-support",
+    "description" : "PROD"
   } ],
   "paths" : {
     "/internal/position-status-reconciliation" : {
