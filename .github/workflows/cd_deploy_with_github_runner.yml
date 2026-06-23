@@ -47,6 +47,12 @@ jobs:
     name: Deploy on AKS
     environment: ${{ inputs.environment }}
     steps:
+      - id: debug
+        name: DEBUGGGGG
+        env:
+          test: ${{secrets.CLIENT_ID}}
+        run: echo "environment=${{env.environment}} -- ${{inputs.environment}} -- ${#test}"
+
       - name: Deploy
         uses: pagopa/github-actions-template/aks-deploy@713f5abd8f8ee210e5f6a4243ae52eb7c1b3b5ab
         with:

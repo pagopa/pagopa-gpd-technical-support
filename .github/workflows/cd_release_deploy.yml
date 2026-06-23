@@ -151,8 +151,7 @@ jobs:
     if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
     uses: ./.github/workflows/cd_deploy_with_github_runner.yml
     with:
-      #environment: ${{ needs.setup.outputs.environment }}
-      environment: 'dev'
+      environment: ${{ needs.setup.outputs.environment }}
       suffix_name: ${{ inputs.is_canary && '-canary' || '' }}
       is_canary: ${{ inputs.is_canary }}
       traffic_weight: ${{ inputs.traffic_weight }}
