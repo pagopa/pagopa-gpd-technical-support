@@ -43,7 +43,7 @@ jobs:
       - id: debug
         name: DEBUGGGGG
         env:
-          test: ${{secrets.CLIENT_ID}}
+          test: ${{secrets.CD_CLIENT_ID}}
         run: echo "environment=${{env.environment}} -- ${{inputs.environment}} -- ${#test}"
 
       - name: Deploy
