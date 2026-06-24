@@ -14,7 +14,7 @@
 
   <groupId>it.gov.pagopa.gpd</groupId>
   <artifactId>pagopa-gpd-technical-support</artifactId>
-  <version>0.0.1-7-PIDM-1995-debt-positions-status-reconciliation</version>
+  <version>0.0.1-8-PIDM-1995-debt-positions-status-reconciliation</version>
   <name>GPD Technical Support</name>
   <description>Technical support APIs for GPD</description>
 
