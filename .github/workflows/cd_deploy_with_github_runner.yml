@@ -17,8 +17,8 @@ on:
         type: string
       traffic_weight:
         required: false
-        type: number
-        default: 0
+        type: string
+        default: "0"
         description: 'The percentage of traffic to be sent to the canary version'
       is_canary:
         type: boolean
