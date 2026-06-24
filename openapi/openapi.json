@@ -4,7 +4,7 @@
     "description": "Technical support APIs for GPD",
     "termsOfService": "https://www.pagopa.gov.it/",
     "title": "GPD Technical Support",
-    "version": "0.0.1-6-PIDM-1995-debt-positions-status-reconciliation"
+    "version": "0.0.1-7-PIDM-1995-debt-positions-status-reconciliation"
   },
   "servers": [
     {
