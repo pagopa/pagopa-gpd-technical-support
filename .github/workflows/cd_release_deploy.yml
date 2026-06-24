@@ -141,17 +141,17 @@ jobs:
         id: semver
         uses: pagopa/github-actions-template/ghcr-build-push@d91a1fd0b913c9830589be5d86cdb71c90813fae # v1.5.4
         with:
-          branch: ${{ github.ref_name }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ needs.release.outputs.version }}
 
   deploy_aks:
     name: Deploy on AKS ${{ needs.setup.outputs.environment }}
     needs: [ setup, release, image ]
-    if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
+    if: ${{ always() && needs.setup.result == 'success' && (needs.setup.outputs.semver == 'skip' || (needs.release.result == 'success' && needs.image.result == 'success')) }}
     uses: ./.github/workflows/cd_deploy_with_github_runner.yml
     with:
       environment: ${{ needs.setup.outputs.environment }}
+      branch: ${{ github.ref_name }}
       suffix_name: ${{ inputs.is_canary && '-canary' || '' }}
       is_canary: ${{ inputs.is_canary }}
       traffic_weight: ${{ inputs.traffic_weight }}
