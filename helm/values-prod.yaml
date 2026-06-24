@@ -84,7 +84,7 @@ microservice-chart:
     OTEL_TRACES_SAMPLER: "always_on"
   envSecret:
     # required
-    APPLICATIONINSIGHTS_CONNECTION_STRING: 'app-insight-connection-string'
+    APPLICATIONINSIGHTS_CONNECTION_STRING: 'ai-p-connection-string'
     OTEL_EXPORTER_OTLP_HEADERS: elastic-apm-secret-token
   keyvault:
     name: "pagopa-p-name-kv" #TODO
