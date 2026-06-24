@@ -155,7 +155,7 @@ jobs:
       suffix_name: ${{ inputs.is_canary && '-canary' || '' }}
       is_canary: ${{ inputs.is_canary }}
       traffic_weight: ${{ inputs.traffic_weight }}
-    secrets: inherit
+      secrets: inherit
 
   notify:
     needs: [ setup, release, deploy_aks ]

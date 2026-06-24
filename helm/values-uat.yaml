@@ -107,7 +107,7 @@ microservice-chart:
     RECONCILIATION_BIZ_COSMOS_KEY: "gpd-technical-support-biz-cosmos-key"
     RECONCILIATION_GPD_PAY_API_KEY: "gpd-technical-support-gpd-pay-subkey"
     # required
-    APPLICATIONINSIGHTS_CONNECTION_STRING: 'app-insight-connection-string'
+    APPLICATIONINSIGHTS_CONNECTION_STRING: 'ai-u-connection-string'
     OTEL_EXPORTER_OTLP_HEADERS: elastic-apm-secret-token
   keyvault:
     name: "pagopa-u-gps-kv"
