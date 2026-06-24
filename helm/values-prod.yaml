@@ -4,7 +4,7 @@ microservice-chart:
   fullnameOverride: ""
   image:
     repository: ghcr.io/pagopa/yourname # TODO
-    tag: "0.0.1-5-PIDM-1995-debt-positions-status-reconciliation"
+    tag: "0.0.1-6-PIDM-1995-debt-positions-status-reconciliation"
     pullPolicy: Always
   livenessProbe:
     handlerType: httpGet
