@@ -1,20 +1,27 @@
-# Performance Tests with k6
+# k6 reconciliation tests
 
-[k6](https://k6.io/) is a load testing tool. 👀
-See [here](https://k6.io/docs/get-started/installation/) to install it.
+The k6 scripts read their options and environment configuration exactly as in the PagoPA load-test template:
 
-## How to Run 🚀
+```javascript
+export let options = JSON.parse(open(__ENV.TEST_TYPE));
 
-To run k6 tests use the command:
+const varsArray = new SharedArray('vars', function () {
+  return JSON.parse(open(`${__ENV.VARS}`)).environment;
+});
 
-``` shell
-k6 run --env VARS=local.environment.json --env TEST_TYPE=./test-types/load.json --env API_SUBSCRIPTION_KEY=<your-secret> <script-name>.js
+const vars = varsArray[0];
 ```
 
-where
+`VARS` resolves to:
 
-- _VARS_ is a environment file
-- _TEST_TYPE_ is a file in `/test-types` folder
-- _API_SUBSCRIPTION_KEY_ is your sub-key
+```text
+/scripts/environments/<local|dev|uat|prod>.environment.json
+```
 
-`<script-name>.js` is the scenario to run with k6
+`TEST_TYPE` resolves to:
+
+```text
+/scripts/test-types/<type>.json
+```
+
+The current `reconciliation_workflow.js` triggers one asynchronous reconciliation request when used with `pilot.json`. Polling of the run and end-to-end result validation will be introduced after the APD and Biz+ seed steps.

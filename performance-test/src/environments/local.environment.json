@@ -1,0 +1,43 @@
+{
+  "environment": [
+    {
+      "env": "local",
+      "host": "http://host.docker.internal:8080",
+      "basePath": "",
+      "reconciliationPath": "/internal/position-status-reconciliation",
+      "subscriptionHeader": "Ocp-Apim-Subscription-Key",
+      "apd": {
+        "jdbcUrl": "jdbc:postgresql://apd-local:5432/apd",
+        "username": "apduser",
+        "schema": "apd"
+      },
+      "bizCosmos": {
+        "endpoint": "https://host.docker.internal:8081/",
+        "database": "db",
+        "container": "biz-events"
+      },
+      "reconciliationCosmos": {
+        "endpoint": "https://host.docker.internal:8081/",
+        "database": "gpd_db",
+        "runsContainer": "gpd-reconciliation-runs",
+        "reportsContainer": "gpd-reconciliation-reports"
+      },
+      "reconciliation": {
+        "serviceTypes": [
+          "GPD"
+        ],
+        "minProcessingDelayDays": 1,
+        "maxProcessingWindowDays": 7,
+        "candidateChunkSize": 500
+      },
+      "testData": {
+        "organizationFiscalCode": "99999999982",
+        "performanceDataPrefix": "GPDTS_PERF_"
+      },
+      "safety": {
+        "dataMutationEnabled": true,
+        "fullDayPurgeEnabled": true
+      }
+    }
+  ]
+}

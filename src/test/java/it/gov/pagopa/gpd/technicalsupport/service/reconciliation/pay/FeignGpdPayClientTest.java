@@ -72,7 +72,7 @@ class FeignGpdPayClientTest {
     assertThat(request.pspTaxCode()).isEqualTo("91010030400");
     assertThat(request.pspCompany()).isEqualTo("Banca Agricola Commerciale SpA");
     assertThat(request.idReceipt()).isEqualTo("receipt-id");
-    assertThat(request.fee()).isEqualTo("0.0");
+    assertThat(request.fee()).isEqualTo("0");
   }
 
   @Test

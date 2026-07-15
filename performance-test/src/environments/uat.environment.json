@@ -1,0 +1,43 @@
+{
+  "environment": [
+    {
+      "env": "uat",
+      "host": "https://api.uat.platform.pagopa.it",
+      "basePath": "/gpd-technical-support",
+      "reconciliationPath": "/internal/position-status-reconciliation",
+      "subscriptionHeader": "Ocp-Apim-Subscription-Key",
+      "apd": {
+        "jdbcUrl": "jdbc:postgresql://gpd-db.u.internal.postgresql.pagopa.it:5432/apd?sslmode=require&prepareThreshold=0",
+        "username": "apduser",
+        "schema": "apd"
+      },
+      "bizCosmos": {
+        "endpoint": "https://pagopa-u-weu-bizevents-ds-cosmos-account.documents.azure.com:443/",
+        "database": "db",
+        "container": "biz-events"
+      },
+      "reconciliationCosmos": {
+        "endpoint": "https://pagopa-u-weu-gps-cosmos-account.documents.azure.com:443/",
+        "database": "gpd_db",
+        "runsContainer": "gpd-reconciliation-runs",
+        "reportsContainer": "gpd-reconciliation-reports"
+      },
+      "reconciliation": {
+        "serviceTypes": [
+          "GPD"
+        ],
+        "minProcessingDelayDays": 1,
+        "maxProcessingWindowDays": 7,
+        "candidateChunkSize": 500
+      },
+      "testData": {
+        "organizationFiscalCode": "99999999982",
+        "performanceDataPrefix": "GPDTS_PERF_"
+      },
+      "safety": {
+        "dataMutationEnabled": true,
+        "fullDayPurgeEnabled": true
+      }
+    }
+  ]
+}
