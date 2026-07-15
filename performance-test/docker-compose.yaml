@@ -7,15 +7,30 @@ services:
     container_name: gpd-technical-support-apd-preparation
     volumes:
       - '${PWD}/src:/scripts:ro'
+      - performance-data:/work
     environment:
       - VARS=/scripts/environments/${env}.environment.json
       - TEST_DAY=${test_day}
       - POSITIONS_TO_CREATE=${positions_to_create}
+      - VERBOSE_LOGS=${verbose_logs}
       - ALLOW_FULL_DAY_PURGE=${allow_full_day_purge}
       - APD_PASSWORD=${apd_password}
     entrypoint:
       - /bin/bash
       - /scripts/data-preparation/apd/prepare-test-day.sh
+  biz-preparation:
+    build:
+      context: .
+      dockerfile: Dockerfile.biz-tools
+    container_name: gpd-technical-support-biz-preparation
+    volumes:
+      - '${PWD}/src:/scripts:ro'
+      - performance-data:/work
+    environment:
+      - VARS=/scripts/environments/${env}.environment.json
+      - POSITIONS_TO_CREATE=${positions_to_create}
+      - VERBOSE_LOGS=${verbose_logs}
+      - BIZ_COSMOS_KEY=${biz_cosmos_key}
 
   apd-local:
     image: postgres:15.17-alpine
@@ -66,3 +81,4 @@ services:
 
 volumes:
   apd-local-data:
+  performance-data:

@@ -120,7 +120,9 @@ FROM gpdts_seed_validation
   \quit 31
 \endif
 
-\echo 'First 10 inserted performance candidates:'
+\if :verbose_logs
+
+\echo 'Inserted performance candidates:'
 
 SELECT
   pp.id AS payment_position_id,
@@ -142,3 +144,9 @@ WHERE pp.inserted_date >= :'test_day'::date
   AND pp.iupd LIKE :'marker_prefix' || :'run_id' || '_%'
 ORDER BY po.id
 LIMIT 10;
+
+\else
+
+\echo 'Candidate details omitted because LOG_MODE=SUMMARY.'
+
+\endif

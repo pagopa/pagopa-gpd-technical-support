@@ -4,10 +4,14 @@ set -Eeuo pipefail
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly SQL_DIR="${SCRIPT_DIR}/sql"
+readonly WORK_DIR="/work"
+readonly MANIFEST_PATH="${WORK_DIR}/apd-candidates.jsonl"
+readonly METADATA_PATH="${WORK_DIR}/apd-seed-metadata.json"
 
 VARS="${VARS:-}"
 TEST_DAY="${TEST_DAY:-}"
 POSITIONS_TO_CREATE="${POSITIONS_TO_CREATE:-100}"
+VERBOSE_LOGS="${VERBOSE_LOGS:-false}"
 ALLOW_FULL_DAY_PURGE="${ALLOW_FULL_DAY_PURGE:-false}"
 APD_PASSWORD="${APD_PASSWORD:-}"
 
@@ -63,6 +67,13 @@ command -v psql >/dev/null 2>&1 || fail 10 "psql is required"
   || fail 10 "POSITIONS_TO_CREATE must be a positive integer"
 (( POSITIONS_TO_CREATE >= 3 )) \
   || fail 10 "POSITIONS_TO_CREATE must be at least 3 to cover VALID, EXPIRED and INVALID scenarios"  
+VERBOSE_LOGS="$(
+  printf '%s' "$VERBOSE_LOGS" |
+    tr '[:upper:]' '[:lower:]'
+)"
+
+[[ "$VERBOSE_LOGS" == "true" || "$VERBOSE_LOGS" == "false" ]] \
+  || fail 10 "VERBOSE_LOGS must be true or false"
 ALLOW_FULL_DAY_PURGE="$(printf '%s' "$ALLOW_FULL_DAY_PURGE" | tr '[:upper:]' '[:lower:]')"
 [[ "$ALLOW_FULL_DAY_PURGE" == "true" || "$ALLOW_FULL_DAY_PURGE" == "false" ]] \
   || fail 10 "ALLOW_FULL_DAY_PURGE must be true or false"
@@ -134,6 +145,7 @@ PSQL_VARS=(
   -v "positions_to_create=${POSITIONS_TO_CREATE}"
   -v "organization_fiscal_code=${ORGANIZATION_FISCAL_CODE}"
   -v "run_id=${RUN_ID}"
+  -v "verbose_logs=${VERBOSE_LOGS}"
 )
 
 run_sql() {
@@ -146,6 +158,9 @@ scalar_sql() {
   "${PSQL[@]}" "${PSQL_VARS[@]}" -qAt -f "$file" | tr -d '[:space:]'
 }
 
+mkdir -p "$WORK_DIR"
+rm -f "$MANIFEST_PATH" "$METADATA_PATH"
+
 echo "============================================================"
 echo "APD performance-test day preparation"
 echo "ENVIRONMENT=${ENVIRONMENT}"
@@ -157,6 +172,11 @@ echo "APD_SCHEMA=${APD_SCHEMA}"
 echo "SERVICE_TYPES=${SERVICE_TYPES}"
 echo "MARKER_PREFIX=${MARKER_PREFIX}"
 echo "ALLOW_FULL_DAY_PURGE=${ALLOW_FULL_DAY_PURGE}"
+if [[ "$VERBOSE_LOGS" == "true" ]]; then
+  echo "LOG_MODE=VERBOSE"
+else
+  echo "LOG_MODE=SUMMARY"
+fi
 echo "============================================================"
 
 run_sql "${SQL_DIR}/preflight.sql"
@@ -210,6 +230,55 @@ echo
 echo "Validating APD performance data..."
 
 run_sql "${SQL_DIR}/validate-performance-data.sql"
+
+echo
+echo "Exporting APD reconciliation candidates..."
+
+"${PSQL[@]}" \
+  "${PSQL_VARS[@]}" \
+  -qAt \
+  -f "${SQL_DIR}/export-performance-candidates.sql" \
+  > "$MANIFEST_PATH"
+
+MANIFEST_COUNT="$(
+  wc -l < "$MANIFEST_PATH" |
+    tr -d '[:space:]'
+)"
+
+[[ "$MANIFEST_COUNT" =~ ^[0-9]+$ ]] \
+  || fail 32 "Unable to determine APD manifest size"
+
+if (( MANIFEST_COUNT != POSITIONS_TO_CREATE )); then
+  fail 32 \
+    "APD manifest contains ${MANIFEST_COUNT} candidates, expected ${POSITIONS_TO_CREATE}"
+fi
+
+jq -n \
+  --arg environment "$ENVIRONMENT" \
+  --arg testDay "$TEST_DAY" \
+  --arg runId "$RUN_ID" \
+  --arg organizationFiscalCode "$ORGANIZATION_FISCAL_CODE" \
+  --argjson positions "$POSITIONS_TO_CREATE" \
+  '{
+    environment: $environment,
+    testDay: $testDay,
+    runId: $runId,
+    organizationFiscalCode: $organizationFiscalCode,
+    positions: $positions
+  }' \
+  > "$METADATA_PATH"
+
+[[ -s "$MANIFEST_PATH" ]] \
+  || fail 32 "APD candidate manifest was not created or is empty"
+
+[[ -s "$METADATA_PATH" ]] \
+  || fail 32 "APD seed metadata file was not created or is empty"
+
+echo
+echo "APD_MANIFEST_READY:"
+echo "  MANIFEST_PATH=${MANIFEST_PATH}"
+echo "  METADATA_PATH=${METADATA_PATH}"
+echo "  CANDIDATES=${MANIFEST_COUNT}"
 
 echo
 echo "APD_TEST_DATA_READY:"

@@ -16,6 +16,18 @@
         "database": "db",
         "container": "biz-events"
       },
+	  "bizEvent": {
+	  	 "serviceIdentifier": "GPDTS_PERF_DEV",
+	  	 "pspCode": "ABI03034",
+	  	 "pspBrokerCode": "97249640588",
+	  	 "pspChannelCode": "97249640588_01",
+	  	 "pspCompany": "Banca Agricola Commerciale SpA",
+	  	 "pspTaxCode": "91010030400",
+	  	 "paymentMethod": "creditCard",
+	  	 "touchpoint": "app",
+	  	 "paymentChannel": "app",
+	  	 "bulkChunkSize": 1000
+	  },
       "reconciliationCosmos": {
         "endpoint": "https://pagopa-d-weu-gps-cosmos-account.documents.azure.com:443/",
         "database": "gpd_db",

@@ -171,6 +171,14 @@ done
   || fail "POSITIONS_TO_CREATE must be at least 3 to cover VALID, EXPIRED and INVALID scenarios"  
 (( POSITIONS_TO_CREATE <= 1000000 )) \
   || fail "POSITIONS_TO_CREATE cannot be greater than 1000000"
+  
+if (( POSITIONS_TO_CREATE <= 10 )); then
+  VERBOSE_LOGS="true"
+  LOG_MODE="VERBOSE"
+else
+  VERBOSE_LOGS="false"
+  LOG_MODE="SUMMARY"
+fi
 
 for boolean_name in PREPARE_ONLY SKIP_PREPARE ALLOW_FULL_DAY_PURGE; do
   boolean_value="${!boolean_name}"
@@ -191,6 +199,14 @@ if [[ "$SKIP_PREPARE" != "true" ]]; then
   [[ -n "$APD_PASSWORD" ]] || fail "APD_PASSWORD is required for APD preparation"
 fi
 
+if [[
+  "$SKIP_PREPARE" != "true" &&
+  "$ENVIRONMENT" != "local"
+]]; then
+  [[ -n "$BIZ_COSMOS_KEY" ]] \
+    || fail "BIZ_COSMOS_KEY is required for Biz+ preparation"
+fi
+
 if [[ "$PREPARE_ONLY" != "true" ]]; then
   [[ -n "$API_SUBSCRIPTION_KEY" ]] \
     || fail "API_SUBSCRIPTION_KEY is required when k6 is executed"
@@ -203,6 +219,7 @@ export script="$SCRIPT"
 export db_name="$DB_NAME"
 export test_day="$TEST_DAY"
 export positions_to_create="$POSITIONS_TO_CREATE"
+export verbose_logs="$VERBOSE_LOGS"
 export allow_full_day_purge="$ALLOW_FULL_DAY_PURGE"
 export api_subscription_key="$API_SUBSCRIPTION_KEY"
 export apd_password="$APD_PASSWORD"
@@ -240,15 +257,32 @@ if [[ "$SKIP_PREPARE" != "true" ]]; then
   echo "TEST_TYPE=$TEST_TYPE"
   echo "TEST_DAY=$TEST_DAY"
   echo "POSITIONS_TO_CREATE=$POSITIONS_TO_CREATE"
+  echo "LOG_MODE=$LOG_MODE"
   echo "ALLOW_FULL_DAY_PURGE=$ALLOW_FULL_DAY_PURGE"
   echo "============================================================"
 
   "${compose[@]}" build apd-preparation
   "${compose[@]}" run --rm apd-preparation
+  
+  if [[ "$ENVIRONMENT" != "local" ]]; then
+    echo
+    echo "============================================================"
+    echo "Step 2 - Biz+ DONE event preparation"
+    echo "ENVIRONMENT=$ENVIRONMENT"
+    echo "TEST_DAY=$TEST_DAY"
+    echo "POSITIONS_TO_CREATE=$POSITIONS_TO_CREATE"
+    echo "============================================================"
+
+    "${compose[@]}" build biz-preparation
+    "${compose[@]}" run --rm biz-preparation
+  else
+    echo
+    echo "Step 2 skipped in local environment: Cosmos emulator is not configured."
+  fi
 fi
 
 if [[ "$PREPARE_ONLY" == "true" ]]; then
-  echo "Step 1 completed. k6 execution skipped by --prepare-only."
+  echo "Data preparation completed. k6 execution skipped by --prepare-only."
   exit 0
 fi
 
