@@ -4,23 +4,6 @@
 
 #########################
 
-data "azurerm_api_management_product" "technical_support_api_product" {
-  product_id          = local.apim.technical_support_product
-  api_management_name = local.apim.name
-  resource_group_name = local.apim.rg
-}
-
-data "azurerm_api_management_product" "gpd_integration_product" {
-  product_id          = local.apim.gpd_integration_product
-  api_management_name = local.apim.name
-  resource_group_name = local.apim.rg
-}
-
-data "azurerm_key_vault" "gps_kv" {
-  name                = local.gps_kv.name
-  resource_group_name = local.gps_kv.rg
-}
-
 resource "azurerm_api_management_api_version_set" "api_version_set" {
   name                = format("%s-%s", var.env_short, local.gpd_technical_support_api.name)
   resource_group_name = local.apim.rg
@@ -61,15 +44,8 @@ module "api_v1" {
 resource "azurerm_api_management_subscription" "gpd_technical_support_gpd_pay_subkey" {
   api_management_name = local.apim.name
   resource_group_name = local.apim.rg
-  product_id          = data.azurerm_api_management_product.gpd_integration_product.id
+  api_id              = module.api_v1.id
   display_name        = "GPD Technical Support for GPD PAY recovery"
   allow_tracing       = false
   state               = "active"
-}
-
-resource "azurerm_key_vault_secret" "gpd_technical_support_gpd_pay_subkey_secret" {
-  name         = "gpd-technical-support-gpd-pay-subkey"
-  value        = azurerm_api_management_subscription.gpd_technical_support_gpd_pay_subkey.primary_key
-  content_type = "text/plain"
-  key_vault_id = data.azurerm_key_vault.gps_kv.id
 }
