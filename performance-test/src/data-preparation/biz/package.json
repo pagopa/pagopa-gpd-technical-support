@@ -1,0 +1,9 @@
+{
+  "name": "gpd-technical-support-biz-data-preparation",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@azure/cosmos": "4.9.3"
+  }
+}

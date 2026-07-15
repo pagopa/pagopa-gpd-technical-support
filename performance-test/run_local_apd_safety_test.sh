@@ -11,7 +11,6 @@ TEST_DAY="${TEST_DAY:-$(date -d '2 days ago' +%F)}"
 # These variables are needed only because this script also invokes Docker Compose directly
 # to initialize and validate the local PostgreSQL fixture.
 export env=local
-export type=pilot
 export script=reconciliation_workflow
 export db_name=k6
 export test_day="$TEST_DAY"
@@ -52,7 +51,6 @@ echo "Test A - safe mode must delete owned data and stop on foreign candidates"
 set +e
 ./run_performance_test.sh \
   ENVIRONMENT=local \
-  TEST_TYPE=pilot \
   SCRIPT=reconciliation_workflow \
   DB_NAME=k6 \
   TEST_DAY="$TEST_DAY" \
@@ -75,7 +73,6 @@ echo
 echo "Test B - explicit purge flag must remove foreign candidate graphs"
 ./run_performance_test.sh \
   ENVIRONMENT=local \
-  TEST_TYPE=pilot \
   SCRIPT=reconciliation_workflow \
   DB_NAME=k6 \
   TEST_DAY="$TEST_DAY" \
@@ -89,4 +86,4 @@ echo "Test B - explicit purge flag must remove foreign candidate graphs"
   -f /local/assert-full-purge.sql
 
 echo
-echo "LOCAL_STEP1_TEST_PASSED"
+echo "LOCAL_APD_SAFETY_TEST_PASSED"

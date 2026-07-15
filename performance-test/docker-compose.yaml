@@ -7,15 +7,65 @@ services:
     container_name: gpd-technical-support-apd-preparation
     volumes:
       - '${PWD}/src:/scripts:ro'
+      - performance-data:/work
     environment:
       - VARS=/scripts/environments/${env}.environment.json
       - TEST_DAY=${test_day}
       - POSITIONS_TO_CREATE=${positions_to_create}
+      - VERBOSE_LOGS=${verbose_logs}
       - ALLOW_FULL_DAY_PURGE=${allow_full_day_purge}
       - APD_PASSWORD=${apd_password}
     entrypoint:
       - /bin/bash
       - /scripts/data-preparation/apd/prepare-test-day.sh
+  biz-preparation:
+    build:
+      context: .
+      dockerfile: Dockerfile.biz-tools
+    container_name: gpd-technical-support-biz-preparation
+    volumes:
+      - '${PWD}/src:/scripts:ro'
+      - performance-data:/work
+    environment:
+      - VARS=/scripts/environments/${env}.environment.json
+      - POSITIONS_TO_CREATE=${positions_to_create}
+      - VERBOSE_LOGS=${verbose_logs}
+      - BIZ_COSMOS_KEY=${biz_cosmos_key}
+  reconciliation-validation:
+    build:
+      context: .
+      dockerfile: Dockerfile.reconciliation-validator
+    container_name: gpd-technical-support-reconciliation-validation
+    volumes:
+      - '${PWD}/src:/scripts:ro'
+      - performance-data:/work
+    environment:
+      - VARS=/scripts/environments/${env}.environment.json
+      - VERBOSE_LOGS=${verbose_logs}
+      - RECONCILIATION_COSMOS_KEY=${reconciliation_cosmos_key}
+      - EXPECTED_ENVIRONMENT=${env}
+      - EXPECTED_TEST_DAY=${test_day}
+      - EXPECTED_POSITIONS=${positions_to_create}
+      - EXPECTED_EXECUTION_ID=${reconciliation_execution_id:-}
+      - EXPECTED_LOGICAL_RUN_KEY=${reconciliation_logical_run_key:-}
+  apd-result-validation:
+    build:
+      context: .
+      dockerfile: Dockerfile.apd-tools
+    container_name: gpd-technical-support-apd-result-validation
+    volumes:
+      - '${PWD}/src:/scripts:ro'
+      - performance-data:/work
+    environment:
+      - VARS=/scripts/environments/${env}.environment.json
+      - APD_PASSWORD=${apd_password}
+      - VERBOSE_LOGS=${verbose_logs}
+      - EXPECTED_ENVIRONMENT=${env}
+      - EXPECTED_TEST_DAY=${test_day}
+      - EXPECTED_POSITIONS=${positions_to_create}
+    entrypoint:
+      - /bin/bash
+      - /scripts/data-validation/apd/validate-reconciliation-result.sh
 
   apd-local:
     image: postgres:15.17-alpine
@@ -47,14 +97,14 @@ services:
       - BIZ_COSMOS_KEY=${biz_cosmos_key}
       - RECONCILIATION_COSMOS_KEY=${reconciliation_cosmos_key}
       - TEST_DAY=${test_day}
+      - POSITIONS_TO_CREATE=${positions_to_create}
+      - VERBOSE_LOGS=${verbose_logs}
       - VARS=/scripts/environments/${env}.environment.json
       - TEST_TYPE=/scripts/test-types/${type}.json
       - K6_OUT=influxdb=http://nginx:8086/${db_name}
     command: run /scripts/${script}.js
     depends_on:
       - nginx
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
 
   nginx:
     image: nginx@sha256:0f04e4f646a3f14bf31d8bc8d885b6c951fdcf42589d06845f64d18aec6a3c4d
@@ -66,3 +116,4 @@ services:
 
 volumes:
   apd-local-data:
+  performance-data:
