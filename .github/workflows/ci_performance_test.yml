@@ -1,0 +1,290 @@
+name: Reconciliation Performance Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        type: choice
+        options:
+          - dev
+          - uat
+
+      test_day:
+        description: Processing day in YYYY-MM-DD format
+        required: true
+        type: string
+
+      positions_to_create:
+        description: Number of debt positions to create (3-1000000)
+        required: true
+        type: string
+        default: "10000"
+
+      execution_mode:
+        description: Execution mode
+        required: true
+        type: choice
+        default: full
+        options:
+          - full
+          - prepare-only
+          - skip-prepare
+
+      allow_full_day_purge:
+        description: >-
+          Delete all unrelated reconciliation candidates found on TEST_DAY.
+          WARNING: complete APD payment-position graphs may be removed.
+        required: true
+        type: boolean
+        default: false
+
+      upload_log_artifact:
+        description: Upload the complete execution log as a seven-day artifact
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gpd-reconciliation-performance-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  performance_test:
+    name: Performance test - ${{ inputs.environment }}
+    runs-on: [self-hosted-job, "${{ inputs.environment }}"]
+    environment: ${{ inputs.environment }}
+
+    # A one-million-position workflow can take many hours.
+    # GitHub allows self-hosted jobs to run for up to five days, but the
+    # infrastructure hosting the runner must also have a compatible timeout.
+    timeout-minutes: 2160
+
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@1f9a0c22da41e6ebfa534300ef656657ea2c6707
+        with:
+          persist-credentials: false
+
+      - name: Validate runner prerequisites
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          command -v bash >/dev/null \
+            || {
+              echo "ERROR: bash is not installed"
+              exit 1
+            }
+
+          command -v docker >/dev/null \
+            || {
+              echo "ERROR: Docker CLI is not installed"
+              exit 1
+            }
+
+          docker info >/dev/null \
+            || {
+              echo "ERROR: the runner cannot connect to a Docker daemon."
+              echo "The performance-test framework requires Docker Engine."
+              exit 1
+            }
+
+          docker compose version
+
+      - name: Validate workflow inputs
+        shell: bash
+        env:
+          TEST_DAY: ${{ inputs.test_day }}
+          POSITIONS_TO_CREATE: ${{ inputs.positions_to_create }}
+          EXECUTION_MODE: ${{ inputs.execution_mode }}
+          ALLOW_FULL_DAY_PURGE: ${{ inputs.allow_full_day_purge }}
+        run: |
+          set -Eeuo pipefail
+
+          [[ "$TEST_DAY" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] \
+            || {
+              echo "ERROR: TEST_DAY must use YYYY-MM-DD format."
+              exit 1
+            }
+
+          normalized_test_day="$(
+            date -d "$TEST_DAY" +%F 2>/dev/null
+          )" || {
+            echo "ERROR: TEST_DAY is not a valid calendar date."
+            exit 1
+          }
+
+          [[ "$normalized_test_day" == "$TEST_DAY" ]] \
+            || {
+              echo "ERROR: TEST_DAY is not a valid calendar date."
+              exit 1
+            }
+
+          [[ "$POSITIONS_TO_CREATE" =~ ^[1-9][0-9]*$ ]] \
+            || {
+              echo "ERROR: POSITIONS_TO_CREATE must be a positive integer."
+              exit 1
+            }
+
+          (( POSITIONS_TO_CREATE >= 3 )) \
+            || {
+              echo "ERROR: POSITIONS_TO_CREATE must be at least 3."
+              exit 1
+            }
+
+          (( POSITIONS_TO_CREATE <= 1000000 )) \
+            || {
+              echo "ERROR: POSITIONS_TO_CREATE cannot be greater than 1000000."
+              exit 1
+            }
+
+          case "$EXECUTION_MODE" in
+            full|prepare-only|skip-prepare)
+              ;;
+            *)
+              echo "ERROR: unsupported execution mode: $EXECUTION_MODE"
+              exit 1
+              ;;
+          esac
+
+          if [[
+            "$EXECUTION_MODE" == "skip-prepare" &&
+            "$ALLOW_FULL_DAY_PURGE" == "true"
+          ]]; then
+            echo "ERROR: allow_full_day_purge cannot be used with skip-prepare."
+            exit 1
+          fi
+
+      - name: Warn about full-day purge
+        if: ${{ inputs.allow_full_day_purge }}
+        shell: bash
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          TEST_DAY: ${{ inputs.test_day }}
+        run: |
+          echo "::warning title=Full-day APD purge enabled::The workflow was explicitly started with full-day purge enabled for ENVIRONMENT=${ENVIRONMENT}, TEST_DAY=${TEST_DAY}. All unrelated reconciliation candidate graphs found on that day may be deleted."
+
+      - name: Normalize script line endings and permissions
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          find performance-test \
+            -type f \
+            -name '*.sh' \
+            -exec sed -i 's/\r$//' {} +
+
+          chmod +x \
+            performance-test/run_performance_test.sh \
+            performance-test/run_local_apd_safety_test.sh \
+            performance-test/src/data-preparation/apd/prepare-test-day.sh \
+            performance-test/src/data-validation/apd/validate-reconciliation-result.sh
+
+      - name: Run reconciliation performance test
+        id: run_performance_test
+        shell: bash
+        env:
+          API_SUBSCRIPTION_KEY: ${{ secrets.API_SUBSCRIPTION_KEY }}
+          APD_PASSWORD: ${{ secrets.APD_PASSWORD }}
+          BIZ_COSMOS_KEY: ${{ secrets.BIZ_COSMOS_KEY }}
+          RECONCILIATION_COSMOS_KEY: ${{ secrets.RECONCILIATION_COSMOS_KEY }}
+
+          ENVIRONMENT: ${{ inputs.environment }}
+          TEST_DAY: ${{ inputs.test_day }}
+          POSITIONS_TO_CREATE: ${{ inputs.positions_to_create }}
+          EXECUTION_MODE: ${{ inputs.execution_mode }}
+          ALLOW_FULL_DAY_PURGE: ${{ inputs.allow_full_day_purge }}
+        run: |
+          set -Eeuo pipefail
+
+          cd performance-test
+
+          arguments=(
+            "ENVIRONMENT=${ENVIRONMENT}"
+            "TEST_DAY=${TEST_DAY}"
+            "POSITIONS_TO_CREATE=${POSITIONS_TO_CREATE}"
+          )
+
+          case "$EXECUTION_MODE" in
+            full)
+              ;;
+            prepare-only)
+              arguments+=("--prepare-only")
+              ;;
+            skip-prepare)
+              arguments+=("--skip-prepare")
+              ;;
+          esac
+
+          if [[ "$ALLOW_FULL_DAY_PURGE" == "true" ]]; then
+            echo "WARNING: --allow-full-day-purge was explicitly enabled."
+            arguments+=("--allow-full-day-purge")
+          fi
+
+          ./run_performance_test.sh "${arguments[@]}" \
+            2>&1 | tee performance-test.log
+
+      - name: Write execution summary
+        if: ${{ always() }}
+        shell: bash
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          TEST_DAY: ${{ inputs.test_day }}
+          POSITIONS_TO_CREATE: ${{ inputs.positions_to_create }}
+          EXECUTION_MODE: ${{ inputs.execution_mode }}
+          ALLOW_FULL_DAY_PURGE: ${{ inputs.allow_full_day_purge }}
+          UPLOAD_LOG_ARTIFACT: ${{ inputs.upload_log_artifact }}
+        run: |
+          set -u
+
+          {
+            echo "## Reconciliation performance test"
+            echo
+            echo "- Environment: \`${ENVIRONMENT}\`"
+            echo "- Test day: \`${TEST_DAY}\`"
+            echo "- Positions: \`${POSITIONS_TO_CREATE}\`"
+            echo "- Execution mode: \`${EXECUTION_MODE}\`"
+            echo "- Full-day purge: \`${ALLOW_FULL_DAY_PURGE}\`"
+            echo "- Log artifact requested: \`${UPLOAD_LOG_ARTIFACT}\`"
+            echo "- Started by: \`${GITHUB_ACTOR}\`"
+            echo
+
+            if [[ -f performance-test/performance-test.log ]]; then
+              echo "### Relevant output"
+              echo
+              echo '```text'
+
+              grep -E \
+                'RECONCILIATION_TRIGGER status=|EXECUTION_ID=|STATUS=|RECOVERED=|MANUAL_REQUIRED=|TECHNICAL_FAILURES=|DURATION_MS=|REQUEST_CHARGE=|APD_SEED_VALIDATION_PASSED|BIZ_SEED_VALIDATION_PASSED|RECONCILIATION_COSMOS_VALIDATION_PASSED|APD_RECONCILIATION_VALIDATION_PASSED|PERFORMANCE_WORKFLOW_VALIDATION_PASSED|^ERROR:' \
+                performance-test/performance-test.log \
+                | tail -n 100 \
+                || true
+
+              echo '```'
+            else
+              echo "The performance-test log was not created."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload execution log
+        if: ${{ always() && inputs.upload_log_artifact }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: >-
+            reconciliation-performance-${{
+              inputs.environment
+            }}-${{
+              inputs.test_day
+            }}-${{
+              github.run_number
+            }}
+          path: performance-test/performance-test.log
+          if-no-files-found: warn
+          retention-days: 7
+          compression-level: 9
