@@ -12,6 +12,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.StringUtils;
+
+import java.util.List;
 
 @Configuration
 @RequiredArgsConstructor
@@ -28,6 +31,10 @@ public class ReconciliationBizCosmosConfig {
         new CosmosClientBuilder()
             .endpoint(properties.getEndpoint())
             .gatewayMode();
+    
+    if (StringUtils.hasText(properties.getReadRegion())) {
+    	  builder.preferredRegions(List.of(properties.getReadRegion()));
+    }
 
     if (properties.isUseManagedIdentity()) {
       builder.credential(new DefaultAzureCredentialBuilder().build());

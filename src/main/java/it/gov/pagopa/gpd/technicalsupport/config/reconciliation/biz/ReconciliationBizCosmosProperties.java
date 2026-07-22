@@ -15,5 +15,6 @@ public class ReconciliationBizCosmosProperties {
   private String key;
   private String databaseName;
   private String containerName;
+  private String readRegion;
   private boolean useManagedIdentity = false;
 }
