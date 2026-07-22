@@ -1,5 +1,16 @@
 name: Reconciliation Performance Tests
 
+# Final execution mode:
+# - workflow_dispatch: manual execution from the Actions page after this
+#   workflow exists on the default branch.
+#
+# Feature-branch test mode:
+# - add the "run-performance-test" label to the pull request;
+# - the workflow runs only when that label is explicitly added;
+# - it uses the safe FEATURE_TEST_* values declared below.
+#
+# Before merging, the pull_request trigger and FEATURE_TEST_* values may be
+# removed if only the standard Run workflow button should remain.
 on:
   workflow_dispatch:
     inputs:
@@ -46,22 +57,77 @@ on:
         type: boolean
         default: false
 
+  # Temporary, on-demand trigger used to test this workflow before it reaches
+  # the default branch. It does not run on push, PR creation, or synchronization.
+  # Add the "run-performance-test" label to the PR to request an execution.
+  pull_request:
+    branches:
+      - main
+    types:
+      - labeled
+
+# Safe values used only when the workflow is requested through the PR label.
+# Update FEATURE_TEST_DAY before adding the label.
+env:
+  FEATURE_TEST_ENVIRONMENT: dev
+  FEATURE_TEST_DAY: "2026-07-13"
+  FEATURE_TEST_POSITIONS_TO_CREATE: "10"
+  FEATURE_TEST_EXECUTION_MODE: full
+  FEATURE_TEST_ALLOW_FULL_DAY_PURGE: "false"
+  FEATURE_TEST_UPLOAD_LOG_ARTIFACT: "false"
+
 permissions:
   contents: read
 
 concurrency:
-  group: gpd-reconciliation-performance-${{ inputs.environment }}
+  group: >-
+    gpd-reconciliation-performance-${{
+      github.event_name == 'workflow_dispatch' &&
+      inputs.environment ||
+      'dev'
+    }}
   cancel-in-progress: false
 
 jobs:
   performance_test:
-    name: Performance test - ${{ inputs.environment }}
-    runs-on: [self-hosted-job, "${{ inputs.environment }}"]
-    environment: ${{ inputs.environment }}
+    # The workflow is requested manually either through workflow_dispatch or
+    # by explicitly adding the dedicated label to the pull request.
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event_name == 'pull_request' &&
+          github.event.action == 'labeled' &&
+          github.event.label.name == 'run-performance-test'
+        )
+      }}
+
+    name: >-
+      Performance test - ${{
+        github.event_name == 'workflow_dispatch' &&
+        inputs.environment ||
+        'dev'
+      }}
+
+    runs-on:
+      - self-hosted-job
+      - >-
+        ${{
+          github.event_name == 'workflow_dispatch' &&
+          inputs.environment ||
+          'dev'
+        }}
+
+    environment: >-
+      ${{
+        github.event_name == 'workflow_dispatch' &&
+        inputs.environment ||
+        'dev'
+      }}
 
     # A one-million-position workflow can take many hours.
-    # GitHub allows self-hosted jobs to run for up to five days, but the
-    # infrastructure hosting the runner must also have a compatible timeout.
+    # The infrastructure hosting the self-hosted runner must have a timeout
+    # compatible with this value.
     timeout-minutes: 2160
 
     steps:
@@ -70,6 +136,65 @@ jobs:
         uses: actions/checkout@1f9a0c22da41e6ebfa534300ef656657ea2c6707
         with:
           persist-credentials: false
+          # For label-based testing, execute the exact PR head revision rather
+          # than the synthetic pull-request merge commit.
+          ref: >-
+            ${{
+              github.event_name == 'pull_request' &&
+              github.event.pull_request.head.sha ||
+              github.sha
+            }}
+
+      - name: Resolve execution parameters
+        shell: bash
+        env:
+          DISPATCH_ENVIRONMENT: ${{ inputs.environment }}
+          DISPATCH_TEST_DAY: ${{ inputs.test_day }}
+          DISPATCH_POSITIONS_TO_CREATE: ${{ inputs.positions_to_create }}
+          DISPATCH_EXECUTION_MODE: ${{ inputs.execution_mode }}
+          DISPATCH_ALLOW_FULL_DAY_PURGE: ${{ inputs.allow_full_day_purge }}
+          DISPATCH_UPLOAD_LOG_ARTIFACT: ${{ inputs.upload_log_artifact }}
+        run: |
+          set -Eeuo pipefail
+
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            trigger_mode="workflow_dispatch"
+            environment="$DISPATCH_ENVIRONMENT"
+            test_day="$DISPATCH_TEST_DAY"
+            positions_to_create="$DISPATCH_POSITIONS_TO_CREATE"
+            execution_mode="$DISPATCH_EXECUTION_MODE"
+            allow_full_day_purge="$DISPATCH_ALLOW_FULL_DAY_PURGE"
+            upload_log_artifact="$DISPATCH_UPLOAD_LOG_ARTIFACT"
+          else
+            trigger_mode="pull_request_label"
+            environment="$FEATURE_TEST_ENVIRONMENT"
+            test_day="$FEATURE_TEST_DAY"
+            positions_to_create="$FEATURE_TEST_POSITIONS_TO_CREATE"
+            execution_mode="$FEATURE_TEST_EXECUTION_MODE"
+            allow_full_day_purge="$FEATURE_TEST_ALLOW_FULL_DAY_PURGE"
+            upload_log_artifact="$FEATURE_TEST_UPLOAD_LOG_ARTIFACT"
+
+            echo "::notice title=Feature-branch performance test::Using the safe FEATURE_TEST_* values declared in the workflow."
+          fi
+
+          {
+            echo "TRIGGER_MODE=$trigger_mode"
+            echo "ENVIRONMENT=$environment"
+            echo "TEST_DAY=$test_day"
+            echo "POSITIONS_TO_CREATE=$positions_to_create"
+            echo "EXECUTION_MODE=$execution_mode"
+            echo "ALLOW_FULL_DAY_PURGE=$allow_full_day_purge"
+            echo "UPLOAD_LOG_ARTIFACT=$upload_log_artifact"
+          } >> "$GITHUB_ENV"
+
+          echo "Resolved execution parameters:"
+          echo "  TRIGGER_MODE=$trigger_mode"
+          echo "  ENVIRONMENT=$environment"
+          echo "  TEST_DAY=$test_day"
+          echo "  POSITIONS_TO_CREATE=$positions_to_create"
+          echo "  EXECUTION_MODE=$execution_mode"
+          echo "  ALLOW_FULL_DAY_PURGE=$allow_full_day_purge"
+          echo "  UPLOAD_LOG_ARTIFACT=$upload_log_artifact"
 
       - name: Validate runner prerequisites
         shell: bash
@@ -99,13 +224,14 @@ jobs:
 
       - name: Validate workflow inputs
         shell: bash
-        env:
-          TEST_DAY: ${{ inputs.test_day }}
-          POSITIONS_TO_CREATE: ${{ inputs.positions_to_create }}
-          EXECUTION_MODE: ${{ inputs.execution_mode }}
-          ALLOW_FULL_DAY_PURGE: ${{ inputs.allow_full_day_purge }}
         run: |
           set -Eeuo pipefail
+
+          [[ "$ENVIRONMENT" =~ ^(dev|uat)$ ]] \
+            || {
+              echo "ERROR: ENVIRONMENT must be dev or uat."
+              exit 1
+            }
 
           [[ "$TEST_DAY" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] \
             || {
@@ -153,6 +279,22 @@ jobs:
               ;;
           esac
 
+          [[
+            "$ALLOW_FULL_DAY_PURGE" == "true" ||
+            "$ALLOW_FULL_DAY_PURGE" == "false"
+          ]] || {
+            echo "ERROR: ALLOW_FULL_DAY_PURGE must be true or false."
+            exit 1
+          }
+
+          [[
+            "$UPLOAD_LOG_ARTIFACT" == "true" ||
+            "$UPLOAD_LOG_ARTIFACT" == "false"
+          ]] || {
+            echo "ERROR: UPLOAD_LOG_ARTIFACT must be true or false."
+            exit 1
+          }
+
           if [[
             "$EXECUTION_MODE" == "skip-prepare" &&
             "$ALLOW_FULL_DAY_PURGE" == "true"
@@ -162,11 +304,8 @@ jobs:
           fi
 
       - name: Warn about full-day purge
-        if: ${{ inputs.allow_full_day_purge }}
+        if: ${{ env.ALLOW_FULL_DAY_PURGE == 'true' }}
         shell: bash
-        env:
-          ENVIRONMENT: ${{ inputs.environment }}
-          TEST_DAY: ${{ inputs.test_day }}
         run: |
           echo "::warning title=Full-day APD purge enabled::The workflow was explicitly started with full-day purge enabled for ENVIRONMENT=${ENVIRONMENT}, TEST_DAY=${TEST_DAY}. All unrelated reconciliation candidate graphs found on that day may be deleted."
 
@@ -194,12 +333,6 @@ jobs:
           APD_PASSWORD: ${{ secrets.APD_PASSWORD }}
           BIZ_COSMOS_KEY: ${{ secrets.BIZ_COSMOS_KEY }}
           RECONCILIATION_COSMOS_KEY: ${{ secrets.RECONCILIATION_COSMOS_KEY }}
-
-          ENVIRONMENT: ${{ inputs.environment }}
-          TEST_DAY: ${{ inputs.test_day }}
-          POSITIONS_TO_CREATE: ${{ inputs.positions_to_create }}
-          EXECUTION_MODE: ${{ inputs.execution_mode }}
-          ALLOW_FULL_DAY_PURGE: ${{ inputs.allow_full_day_purge }}
         run: |
           set -Eeuo pipefail
 
@@ -233,25 +366,19 @@ jobs:
       - name: Write execution summary
         if: ${{ always() }}
         shell: bash
-        env:
-          ENVIRONMENT: ${{ inputs.environment }}
-          TEST_DAY: ${{ inputs.test_day }}
-          POSITIONS_TO_CREATE: ${{ inputs.positions_to_create }}
-          EXECUTION_MODE: ${{ inputs.execution_mode }}
-          ALLOW_FULL_DAY_PURGE: ${{ inputs.allow_full_day_purge }}
-          UPLOAD_LOG_ARTIFACT: ${{ inputs.upload_log_artifact }}
         run: |
-          set -u
+          set +u
 
           {
             echo "## Reconciliation performance test"
             echo
-            echo "- Environment: \`${ENVIRONMENT}\`"
-            echo "- Test day: \`${TEST_DAY}\`"
-            echo "- Positions: \`${POSITIONS_TO_CREATE}\`"
-            echo "- Execution mode: \`${EXECUTION_MODE}\`"
-            echo "- Full-day purge: \`${ALLOW_FULL_DAY_PURGE}\`"
-            echo "- Log artifact requested: \`${UPLOAD_LOG_ARTIFACT}\`"
+            echo "- Trigger mode: \`${TRIGGER_MODE:-not-resolved}\`"
+            echo "- Environment: \`${ENVIRONMENT:-not-resolved}\`"
+            echo "- Test day: \`${TEST_DAY:-not-resolved}\`"
+            echo "- Positions: \`${POSITIONS_TO_CREATE:-not-resolved}\`"
+            echo "- Execution mode: \`${EXECUTION_MODE:-not-resolved}\`"
+            echo "- Full-day purge: \`${ALLOW_FULL_DAY_PURGE:-not-resolved}\`"
+            echo "- Log artifact requested: \`${UPLOAD_LOG_ARTIFACT:-not-resolved}\`"
             echo "- Started by: \`${GITHUB_ACTOR}\`"
             echo
 
@@ -273,14 +400,14 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload execution log
-        if: ${{ always() && inputs.upload_log_artifact }}
+        if: ${{ always() && env.UPLOAD_LOG_ARTIFACT == 'true' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: >-
             reconciliation-performance-${{
-              inputs.environment
+              env.ENVIRONMENT
             }}-${{
-              inputs.test_day
+              env.TEST_DAY
             }}-${{
               github.run_number
             }}
