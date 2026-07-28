@@ -2,7 +2,7 @@ package it.gov.pagopa.gpd.technicalsupport.service.reconciliation.store.cosmos;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
-
+import static org.mockito.Mockito.mock;
 import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.PartitionKey;
@@ -15,7 +15,7 @@ import org.mockito.Mockito;
 
 class CosmosReconciliationReportStoreTest {
 
-  private final CosmosContainer reportsContainer = Mockito.mock(CosmosContainer.class);
+  private final CosmosContainer reportsContainer = mock(CosmosContainer.class);
 
   private final CosmosReconciliationReportStore store =
       new CosmosReconciliationReportStore(reportsContainer);

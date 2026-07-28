@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
 
 import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosException;
@@ -34,7 +35,7 @@ class CosmosReconciliationRunStoreTest {
 
   @BeforeEach
   void setUp() {
-    runsContainer = Mockito.mock(CosmosContainer.class);
+    runsContainer = mock(CosmosContainer.class);
 
     Clock clock = Clock.fixed(Instant.parse("2026-05-26T10:00:00Z"), ZoneOffset.UTC);
 
@@ -46,7 +47,7 @@ class CosmosReconciliationRunStoreTest {
 
   @Test
   void createOrEvaluateRun_shouldCreateRunWhenNotExists() {
-    CosmosException notFound = Mockito.mock(CosmosException.class);
+    CosmosException notFound = mock(CosmosException.class);
     when(notFound.getStatusCode()).thenReturn(404);
 
     when(runsContainer.readItem(
@@ -88,7 +89,7 @@ class CosmosReconciliationRunStoreTest {
 
     @SuppressWarnings("unchecked")
     CosmosItemResponse<ReconciliationRunDocument> response =
-        Mockito.mock(CosmosItemResponse.class);
+        mock(CosmosItemResponse.class);
 
     when(response.getItem()).thenReturn(existingRun);
 
@@ -124,7 +125,7 @@ class CosmosReconciliationRunStoreTest {
 
     @SuppressWarnings("unchecked")
     CosmosItemResponse<ReconciliationRunDocument> response =
-        Mockito.mock(CosmosItemResponse.class);
+        mock(CosmosItemResponse.class);
 
     when(response.getItem()).thenReturn(existingRun);
 

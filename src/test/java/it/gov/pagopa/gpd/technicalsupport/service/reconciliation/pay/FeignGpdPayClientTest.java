@@ -3,6 +3,7 @@ package it.gov.pagopa.gpd.technicalsupport.service.reconciliation.pay;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
 
 import it.gov.pagopa.gpd.technicalsupport.client.gpd.GpdPayApiClient;
 import it.gov.pagopa.gpd.technicalsupport.config.reconciliation.gpd.GpdPayProperties;
@@ -21,7 +22,7 @@ import org.mockito.Mockito;
 
 class FeignGpdPayClientTest {
 
-  private final GpdPayApiClient gpdPayApiClient = Mockito.mock(GpdPayApiClient.class);
+  private final GpdPayApiClient gpdPayApiClient = mock(GpdPayApiClient.class);
 
   private final GpdPayRequestMapper requestMapper = new GpdPayRequestMapper();
 

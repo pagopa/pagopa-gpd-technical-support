@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
 
 import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
@@ -26,12 +27,11 @@ import java.util.Map;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 
 class CosmosBizPositiveEventLookupTest {
 
   private final CosmosContainer bizPositiveEventsContainer =
-      Mockito.mock(CosmosContainer.class);
+      mock(CosmosContainer.class);
 
   private final BizPositiveEventMapper mapper = new BizPositiveEventMapper();
 
@@ -205,7 +205,7 @@ class CosmosBizPositiveEventLookupTest {
   private final void mockCosmosQuery(BizPositiveEventDocument... documents) {
     @SuppressWarnings("unchecked")
     CosmosPagedIterable<BizPositiveEventDocument> pagedIterable =
-        Mockito.mock(CosmosPagedIterable.class);
+        mock(CosmosPagedIterable.class);
 
     when(pagedIterable.stream()).thenReturn(Stream.of(documents));
 

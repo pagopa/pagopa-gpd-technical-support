@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
 
 import it.gov.pagopa.gpd.technicalsupport.model.gpd.DebtPositionStatus;
 import it.gov.pagopa.gpd.technicalsupport.model.gpd.PaymentOptionStatus;
@@ -18,7 +19,6 @@ import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -26,7 +26,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 class JdbcPaymentOptionCandidateReaderTest {
 
   private final NamedParameterJdbcTemplate jdbcTemplate =
-      Mockito.mock(NamedParameterJdbcTemplate.class);
+      mock(NamedParameterJdbcTemplate.class);
 
   private final JdbcPaymentOptionCandidateReader reader =
       new JdbcPaymentOptionCandidateReader(jdbcTemplate);
@@ -228,7 +228,7 @@ class JdbcPaymentOptionCandidateReaderTest {
       String paymentPlanId)
       throws Exception {
 
-    ResultSet rs = Mockito.mock(ResultSet.class);
+    ResultSet rs = mock(ResultSet.class);
 
     when(rs.getObject("day", LocalDate.class)).thenReturn(day);
     when(rs.getString("service_type")).thenReturn(serviceType);

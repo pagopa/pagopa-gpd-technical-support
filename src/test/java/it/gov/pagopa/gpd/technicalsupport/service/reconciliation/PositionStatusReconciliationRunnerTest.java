@@ -2,6 +2,7 @@ package it.gov.pagopa.gpd.technicalsupport.service.reconciliation;
 
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
 
 import it.gov.pagopa.gpd.technicalsupport.model.gpd.ServiceType;
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.ReconciliationRunCreationResult;
@@ -11,14 +12,13 @@ import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
-import org.mockito.Mockito;
 
 class PositionStatusReconciliationRunnerTest {
 
-  private final ReconciliationRunStore runStore = Mockito.mock(ReconciliationRunStore.class);
+  private final ReconciliationRunStore runStore = mock(ReconciliationRunStore.class);
 
   private final PositionStatusReconciliationProcessor processor =
-      Mockito.mock(PositionStatusReconciliationProcessor.class);
+      mock(PositionStatusReconciliationProcessor.class);
 
   private final PositionStatusReconciliationRunner runner =
       new PositionStatusReconciliationRunner(runStore, processor);

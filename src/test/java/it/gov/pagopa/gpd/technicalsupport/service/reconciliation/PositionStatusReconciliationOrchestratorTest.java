@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
 
 import it.gov.pagopa.gpd.technicalsupport.model.gpd.ServiceType;
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.PositionStatusReconciliationRequest;
@@ -19,13 +20,13 @@ import org.mockito.Mockito;
 class PositionStatusReconciliationOrchestratorTest {
 
   private final PositionStatusReconciliationValidator validator =
-      Mockito.mock(PositionStatusReconciliationValidator.class);
+      mock(PositionStatusReconciliationValidator.class);
 
   private final ReconciliationRunStore runStore =
-      Mockito.mock(ReconciliationRunStore.class);
+      mock(ReconciliationRunStore.class);
 
   private final PositionStatusReconciliationRunner runner =
-      Mockito.mock(PositionStatusReconciliationRunner.class);
+      mock(PositionStatusReconciliationRunner.class);
 
   private final PositionStatusReconciliationOrchestrator orchestrator =
       new PositionStatusReconciliationOrchestrator(validator, runStore, runner);

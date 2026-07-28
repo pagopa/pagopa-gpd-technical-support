@@ -8,6 +8,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
 
 import it.gov.pagopa.gpd.technicalsupport.config.reconciliation.ReconciliationProperties;
 import it.gov.pagopa.gpd.technicalsupport.model.gpd.DebtPositionStatus;
@@ -41,16 +42,16 @@ class PositionStatusReconciliationProcessorTest {
   private static final int CANDIDATE_CHUNK_SIZE = 500;
 
   private final PaymentOptionCandidateReader candidateReader =
-      Mockito.mock(PaymentOptionCandidateReader.class);
+      mock(PaymentOptionCandidateReader.class);
 
   private final BizPositiveEventLookup bizPositiveEventLookup =
-      Mockito.mock(BizPositiveEventLookup.class);
+      mock(BizPositiveEventLookup.class);
 
   private final GpdPayClient gpdPayClient =
-      Mockito.mock(GpdPayClient.class);
+      mock(GpdPayClient.class);
 
   private final ReconciliationReportStore reportStore =
-      Mockito.mock(ReconciliationReportStore.class);
+      mock(ReconciliationReportStore.class);
 
   private final ReconciliationProperties properties = reconciliationProperties();
 
