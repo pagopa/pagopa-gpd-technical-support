@@ -90,7 +90,7 @@ microservice-chart:
     RECONCILIATION_APD_MINIMUM_IDLE: "1"
     RECONCILIATION_APD_CONNECTION_TIMEOUT_MS: "30000"
 
-    # Biz+ is read-only routes reads to the North Europe replica through preferredRegions.
+    # Biz+ is read-only and routes reads to the North Europe replica through preferredRegions.
     RECONCILIATION_BIZ_COSMOS_DATABASE_NAME: "db"
     RECONCILIATION_BIZ_COSMOS_CONTAINER_NAME: "biz-events"
     RECONCILIATION_BIZ_COSMOS_USE_MANAGED_IDENTITY: "false"

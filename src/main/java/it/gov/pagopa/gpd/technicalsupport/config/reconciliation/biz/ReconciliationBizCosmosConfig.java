@@ -20,40 +20,40 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ReconciliationBizCosmosConfig {
 
-  public static final String BIZ_COSMOS_CLIENT = "bizCosmosClient";
-  public static final String BIZ_COSMOS_DATABASE = "bizCosmosDatabase";
+	public static final String BIZ_COSMOS_CLIENT = "bizCosmosClient";
+	public static final String BIZ_COSMOS_DATABASE = "bizCosmosDatabase";
 
-  private final ReconciliationBizCosmosProperties properties;
+	private final ReconciliationBizCosmosProperties properties;
 
-  @Bean(BIZ_COSMOS_CLIENT)
-  CosmosClient bizCosmosClient() {
-    CosmosClientBuilder builder =
-        new CosmosClientBuilder()
-            .endpoint(properties.getEndpoint())
-            .gatewayMode();
-    
-    if (StringUtils.hasText(properties.getReadRegion())) {
-    	  builder.preferredRegions(List.of(properties.getReadRegion()));
-    }
+	@Bean(BIZ_COSMOS_CLIENT)
+	CosmosClient bizCosmosClient() {
+		CosmosClientBuilder builder =
+				new CosmosClientBuilder()
+				.endpoint(properties.getEndpoint())
+				.gatewayMode();
 
-    if (properties.isUseManagedIdentity()) {
-      builder.credential(new DefaultAzureCredentialBuilder().build());
-    } else {
-      builder.credential(new AzureKeyCredential(properties.getKey()));
-    }
+		if (StringUtils.hasText(properties.getReadRegion())) {
+			builder.preferredRegions(List.of(properties.getReadRegion()));
+		}
 
-    return builder.buildClient();
-  }
+		if (properties.isUseManagedIdentity()) {
+			builder.credential(new DefaultAzureCredentialBuilder().build());
+		} else {
+			builder.credential(new AzureKeyCredential(properties.getKey()));
+		}
 
-  @Bean(BIZ_COSMOS_DATABASE)
-  CosmosDatabase bizCosmosDatabase(
-      @Qualifier(BIZ_COSMOS_CLIENT) CosmosClient bizCosmosClient) {
-    return bizCosmosClient.getDatabase(properties.getDatabaseName());
-  }
+		return builder.buildClient();
+	}
 
-  @Bean(RECONCILIATION_BIZ_POSITIVE_EVENTS_CONTAINER)
-  CosmosContainer bizPositiveEventsContainer(
-      @Qualifier(BIZ_COSMOS_DATABASE) CosmosDatabase bizCosmosDatabase) {
-    return bizCosmosDatabase.getContainer(properties.getContainerName());
-  }
+	@Bean(BIZ_COSMOS_DATABASE)
+	CosmosDatabase bizCosmosDatabase(
+			@Qualifier(BIZ_COSMOS_CLIENT) CosmosClient bizCosmosClient) {
+		return bizCosmosClient.getDatabase(properties.getDatabaseName());
+	}
+
+	@Bean(RECONCILIATION_BIZ_POSITIVE_EVENTS_CONTAINER)
+	CosmosContainer bizPositiveEventsContainer(
+			@Qualifier(BIZ_COSMOS_DATABASE) CosmosDatabase bizCosmosDatabase) {
+		return bizCosmosDatabase.getContainer(properties.getContainerName());
+	}
 }

@@ -40,18 +40,7 @@ class GpdPayRequestMapperTest {
     "'1.0', '100'",
     "'1.00', '100'",
     "'12.34', '1234'",
-    "' 0.45 ', '45'"
-  })
-  void toPayRequest_shouldConvertDecimalFeeToCents(
-      String bizFee, String expectedFeeInCents) {
-
-    GpdPayPaymentOptionRequest request = mapper.toPayRequest(eventWithFee(bizFee));
-
-    assertThat(request.fee()).isEqualTo(expectedFeeInCents);
-  }
-
-  @ParameterizedTest
-  @CsvSource({
+    "' 0.45 ', '45'",
     "'0', '0'",
     "'1', '1'",
     "'20', '20'",
@@ -59,10 +48,12 @@ class GpdPayRequestMapperTest {
     "'100', '100'",
     "' 45 ', '45'"
   })
-  void toPayRequest_shouldKeepIntegerFeeAlreadyExpressedInCents(
-      String bizFee, String expectedFeeInCents) {
+  void toPayRequest_shouldNormalizeFeeToCents(
+      String bizFee,
+      String expectedFeeInCents) {
 
-    GpdPayPaymentOptionRequest request = mapper.toPayRequest(eventWithFee(bizFee));
+    GpdPayPaymentOptionRequest request =
+        mapper.toPayRequest(eventWithFee(bizFee));
 
     assertThat(request.fee()).isEqualTo(expectedFeeInCents);
   }
@@ -79,17 +70,21 @@ class GpdPayRequestMapperTest {
   @ParameterizedTest
   @ValueSource(strings = {"invalid", "0.001", "1.999", "0,45"})
   void toPayRequest_shouldRejectInvalidFee(String bizFee) {
-    assertThatThrownBy(() -> mapper.toPayRequest(eventWithFee(bizFee)))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("Invalid Biz fee");
+	  BizPositiveEvent event = eventWithFee(bizFee);
+
+	  assertThatThrownBy(() -> mapper.toPayRequest(event))
+	      .isInstanceOf(IllegalArgumentException.class)
+	      .hasMessageContaining("Invalid Biz fee");
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"-1", "-0.01"})
   void toPayRequest_shouldRejectNegativeFee(String bizFee) {
-    assertThatThrownBy(() -> mapper.toPayRequest(eventWithFee(bizFee)))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("cannot be negative");
+	  BizPositiveEvent event = eventWithFee(bizFee);
+
+	  assertThatThrownBy(() -> mapper.toPayRequest(event))
+	      .isInstanceOf(IllegalArgumentException.class)
+	      .hasMessageContaining("cannot be negative");
   }
 
   @Test
