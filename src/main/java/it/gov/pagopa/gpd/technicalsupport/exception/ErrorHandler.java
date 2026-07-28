@@ -9,6 +9,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -41,7 +43,7 @@ public class ErrorHandler extends ResponseEntityExceptionHandler {
 	 *         HTTP status
 	 */
 	@Override
-	public ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex,
+	public @Nullable ResponseEntity<@NonNull Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex,
 			HttpHeaders headers, HttpStatusCode status, WebRequest request) {
 
 		log.warn("Input not readable: ", ex);
@@ -66,7 +68,7 @@ public class ErrorHandler extends ResponseEntityExceptionHandler {
 	 *         HTTP status
 	 */
 	@Override
-	public ResponseEntity<Object> handleMissingServletRequestParameter(
+	public @Nullable ResponseEntity<@NonNull Object> handleMissingServletRequestParameter(
 			MissingServletRequestParameterException ex, HttpHeaders headers, HttpStatusCode status,
 			WebRequest request) {
 
@@ -90,7 +92,7 @@ public class ErrorHandler extends ResponseEntityExceptionHandler {
 	 * @return a {@code ResponseEntity} instance
 	 */
 	@Override
-	protected ResponseEntity<Object> handleTypeMismatch(TypeMismatchException ex, HttpHeaders headers,
+	protected @Nullable ResponseEntity<@NonNull Object> handleTypeMismatch(TypeMismatchException ex, HttpHeaders headers,
 			HttpStatusCode status, WebRequest request) {
 
 		log.warn("Type mismatch: ", ex);
@@ -119,7 +121,7 @@ public class ErrorHandler extends ResponseEntityExceptionHandler {
 	 *         HTTP status
 	 */
 	@Override
-	protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
+	protected @Nullable ResponseEntity<@NonNull Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
 			HttpHeaders headers, HttpStatusCode status, WebRequest request) {
 
 		List<String> details = new ArrayList<>();
