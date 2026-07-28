@@ -9,6 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 
 import it.gov.pagopa.gpd.technicalsupport.config.reconciliation.ReconciliationProperties;
 import it.gov.pagopa.gpd.technicalsupport.model.gpd.DebtPositionStatus;
@@ -31,6 +32,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.time.Month;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -354,7 +356,7 @@ class PositionStatusReconciliationProcessorTest {
     verify(bizPositiveEventLookup).findPositiveEvents(firstChunk);
     verify(bizPositiveEventLookup).findPositiveEvents(secondChunk);
     verify(bizPositiveEventLookup, never()).findPositiveEvent(Mockito.any());
-    verify(reportStore, Mockito.times(3)).save(Mockito.any(ReconciliationReportDocument.class));
+    verify(reportStore, times(3)).save(Mockito.any(ReconciliationReportDocument.class));
   }
   
   @Test
@@ -499,7 +501,7 @@ class PositionStatusReconciliationProcessorTest {
 
   private ReconciliationRunCreationResult run() {
     return new ReconciliationRunCreationResult(
-        LocalDate.of(2026, 5, 20),
+        LocalDate.of(2026, Month.MAY, 20),
         List.of(ServiceType.WISP, ServiceType.GPD),
         "2026-05-20__GPD|WISP",
         "2026-05-20__GPD|WISP__20260526T100000Z",
@@ -521,7 +523,7 @@ class PositionStatusReconciliationProcessorTest {
       DebtPositionStatus ppStatus) {
 
     return new ReconciliationCandidate(
-        LocalDate.of(2026, 5, 20),
+        LocalDate.of(2026, Month.MAY, 20),
         ServiceType.GPD,
         paymentPositionId,
         paymentOptionId,
@@ -541,7 +543,7 @@ class PositionStatusReconciliationProcessorTest {
 		  DebtPositionStatus ppStatus) {
 
 	  return new ReconciliationCandidate(
-			  LocalDate.of(2026, 5, 20),
+			  LocalDate.of(2026, Month.MAY, 20),
 			  ServiceType.GPD,
 			  paymentPositionId,
 			  paymentOptionId,
