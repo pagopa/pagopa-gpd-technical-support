@@ -3,13 +3,13 @@ package it.gov.pagopa.gpd.technicalsupport.config.reconciliation.cosmos;
 import static it.gov.pagopa.gpd.technicalsupport.config.reconciliation.cosmos.CosmosBeanNames.RECONCILIATION_REPORTS_CONTAINER;
 import static it.gov.pagopa.gpd.technicalsupport.config.reconciliation.cosmos.CosmosBeanNames.RECONCILIATION_RUNS_CONTAINER;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.azure.cosmos.CosmosClient;
 import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosDatabase;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,10 +26,10 @@ class ReconciliationCosmosConfigEnabledTest {
     properties.setRunsContainerName("gpd-reconciliation-runs");
     properties.setReportsContainerName("gpd-reconciliation-reports");
 
-    CosmosClient cosmosClient = Mockito.mock(CosmosClient.class);
-    CosmosDatabase cosmosDatabase = Mockito.mock(CosmosDatabase.class);
-    CosmosContainer runsContainer = Mockito.mock(CosmosContainer.class);
-    CosmosContainer reportsContainer = Mockito.mock(CosmosContainer.class);
+    CosmosClient cosmosClient = mock(CosmosClient.class);
+    CosmosDatabase cosmosDatabase = mock(CosmosDatabase.class);
+    CosmosContainer runsContainer = mock(CosmosContainer.class);
+    CosmosContainer reportsContainer = mock(CosmosContainer.class);
 
     when(cosmosClient.getDatabase("gpd_db")).thenReturn(cosmosDatabase);
     when(cosmosDatabase.getContainer("gpd-reconciliation-runs")).thenReturn(runsContainer);
