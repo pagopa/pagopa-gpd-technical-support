@@ -9,6 +9,7 @@ import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.ReconciliationRun
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.ReconciliationRunStatus;
 import it.gov.pagopa.gpd.technicalsupport.service.reconciliation.store.ReconciliationRunStore;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -27,7 +28,7 @@ class PositionStatusReconciliationRunnerTest {
   void run_shouldMoveRunFromRunningToDone() {
     ReconciliationRunCreationResult run =
         new ReconciliationRunCreationResult(
-            LocalDate.of(2026, 5, 20),
+            LocalDate.of(2026, Month.MAY, 20),
             List.of(ServiceType.GPD, ServiceType.WISP),
             "2026-05-20__GPD|WISP",
             "2026-05-20__GPD|WISP__20260526T100000Z",

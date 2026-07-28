@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import it.gov.pagopa.gpd.technicalsupport.config.reconciliation.ReconciliationProperties;
 import it.gov.pagopa.gpd.technicalsupport.model.gpd.ServiceType;
 import java.time.LocalDate;
+import java.time.Month;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -51,7 +52,7 @@ class ReconciliationReportKeyBuilderTest {
 
   @Test
   void partitionKey_shouldUseDayServiceTypeAndBucket() {
-    String pk = keyBuilder.partitionKey(LocalDate.of(2026, 5, 20), ServiceType.GPD, 7);
+    String pk = keyBuilder.partitionKey(LocalDate.of(2026, Month.MAY, 20), ServiceType.GPD, 7);
 
     assertThat(pk).isEqualTo("2026-05-20__GPD__7");
   }

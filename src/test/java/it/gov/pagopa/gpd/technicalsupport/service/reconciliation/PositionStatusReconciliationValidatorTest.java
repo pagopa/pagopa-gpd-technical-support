@@ -7,6 +7,7 @@ import it.gov.pagopa.gpd.technicalsupport.exception.AppException;
 import it.gov.pagopa.gpd.technicalsupport.model.gpd.ServiceType;
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.PositionStatusReconciliationRequest;
 import java.time.Clock;
+import java.time.Month;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -33,8 +34,8 @@ class PositionStatusReconciliationValidatorTest {
   void validate_shouldRejectWhenToIsBeforeFrom() {
     PositionStatusReconciliationRequest request =
         new PositionStatusReconciliationRequest(
-            LocalDate.of(2026, 5, 20),
-            LocalDate.of(2026, 5, 19),
+            LocalDate.of(2026, Month.MAY, 20),
+            LocalDate.of(2026, Month.MAY, 19),
             List.of(ServiceType.GPD),
             false);
 
@@ -47,8 +48,8 @@ class PositionStatusReconciliationValidatorTest {
   void validate_shouldRejectWhenIntervalExceedsConfiguredLimit() {
     PositionStatusReconciliationRequest request =
         new PositionStatusReconciliationRequest(
-            LocalDate.of(2026, 5, 1),
-            LocalDate.of(2026, 5, 20),
+            LocalDate.of(2026, Month.MAY, 1),
+            LocalDate.of(2026, Month.MAY, 20),
             List.of(ServiceType.GPD),
             false);
 
@@ -61,8 +62,8 @@ class PositionStatusReconciliationValidatorTest {
   void validate_shouldRejectTooRecentInterval() {
     PositionStatusReconciliationRequest request =
         new PositionStatusReconciliationRequest(
-            LocalDate.of(2026, 5, 29),
-            LocalDate.of(2026, 5, 29),
+            LocalDate.of(2026, Month.MAY, 29),
+            LocalDate.of(2026, Month.MAY, 29),
             List.of(ServiceType.GPD),
             false);
 
