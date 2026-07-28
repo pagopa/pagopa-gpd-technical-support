@@ -15,6 +15,7 @@ import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.ReconciliationRun
 import it.gov.pagopa.gpd.technicalsupport.service.reconciliation.PositionStatusReconciliationOrchestrator;
 import java.time.LocalDate;
 import java.util.List;
+import java.time.Month;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -39,7 +40,7 @@ class PositionStatusReconciliationControllerTest {
                 true,
                 List.of(
                     new ReconciliationRunResponse(
-                        LocalDate.of(2026, 5, 20),
+                        LocalDate.of(2026, Month.MAY, 20),
                         List.of(ServiceType.WISP, ServiceType.GPD),
                         "2026-05-20__GPD|WISP",
                         "2026-05-20__GPD|WISP__20260526T100000Z",

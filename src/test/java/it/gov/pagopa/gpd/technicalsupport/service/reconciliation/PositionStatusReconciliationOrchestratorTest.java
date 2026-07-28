@@ -13,6 +13,7 @@ import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.ReconciliationRun
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.ReconciliationRunStatus;
 import it.gov.pagopa.gpd.technicalsupport.service.reconciliation.store.ReconciliationRunStore;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -37,7 +38,7 @@ class PositionStatusReconciliationOrchestratorTest {
 
     ReconciliationRunCreationResult run =
         new ReconciliationRunCreationResult(
-            LocalDate.of(2026, 6, 10),
+            LocalDate.of(2026, Month.JUNE, 10),
             List.of(ServiceType.GPD),
             "2026-06-10__GPD",
             "2026-06-10__GPD__20260615T145835Z",
@@ -45,7 +46,7 @@ class PositionStatusReconciliationOrchestratorTest {
             true);
 
     when(runStore.createOrEvaluateRun(
-            LocalDate.of(2026, 6, 10),
+            LocalDate.of(2026, Month.JUNE, 10),
             List.of(ServiceType.GPD),
             true))
         .thenReturn(run);
@@ -54,7 +55,7 @@ class PositionStatusReconciliationOrchestratorTest {
 
     assertThat(response.accepted()).isTrue();
     assertThat(response.runs()).hasSize(1);
-    assertThat(response.runs().get(0).day()).isEqualTo(LocalDate.of(2026, 6, 10));
+    assertThat(response.runs().get(0).day()).isEqualTo(LocalDate.of(2026, Month.JUNE, 10));
     assertThat(response.runs().get(0).serviceTypes()).containsExactly(ServiceType.GPD);
     assertThat(response.runs().get(0).logicalRunKey()).isEqualTo("2026-06-10__GPD");
     assertThat(response.runs().get(0).executionId())
@@ -64,7 +65,7 @@ class PositionStatusReconciliationOrchestratorTest {
     verify(validator).validate(request);
     verify(runStore)
         .createOrEvaluateRun(
-            LocalDate.of(2026, 6, 10),
+            LocalDate.of(2026, Month.JUNE, 10),
             List.of(ServiceType.GPD),
             true);
     verify(runner).run(run);
@@ -76,7 +77,7 @@ class PositionStatusReconciliationOrchestratorTest {
 
     ReconciliationRunCreationResult run =
         new ReconciliationRunCreationResult(
-            LocalDate.of(2026, 6, 10),
+            LocalDate.of(2026, Month.JUNE, 10),
             List.of(ServiceType.GPD),
             "2026-06-10__GPD",
             "2026-06-10__GPD__20260615T145835Z",
@@ -84,7 +85,7 @@ class PositionStatusReconciliationOrchestratorTest {
             false);
 
     when(runStore.createOrEvaluateRun(
-            LocalDate.of(2026, 6, 10),
+            LocalDate.of(2026, Month.JUNE, 10),
             List.of(ServiceType.GPD),
             false))
         .thenReturn(run);
@@ -98,7 +99,7 @@ class PositionStatusReconciliationOrchestratorTest {
     verify(validator).validate(request);
     verify(runStore)
         .createOrEvaluateRun(
-            LocalDate.of(2026, 6, 10),
+            LocalDate.of(2026, Month.JUNE, 10),
             List.of(ServiceType.GPD),
             false);
     verify(runner, never()).run(Mockito.any());
@@ -106,8 +107,8 @@ class PositionStatusReconciliationOrchestratorTest {
 
   private PositionStatusReconciliationRequest request(boolean force) {
     return new PositionStatusReconciliationRequest(
-        LocalDate.of(2026, 6, 10),
-        LocalDate.of(2026, 6, 10),
+        LocalDate.of(2026, Month.JUNE, 10),
+        LocalDate.of(2026, Month.JUNE, 10),
         List.of(ServiceType.GPD),
         force);
   }
