@@ -1,6 +1,9 @@
 package it.gov.pagopa.gpd.technicalsupport.util;
 
-import java.util.Calendar;
+import static java.nio.charset.StandardCharsets.UTF_8;
+
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import lombok.AccessLevel;
@@ -11,7 +14,7 @@ public class CommonUtility {
 
   /**
    * @param value value to deNullify.
-   * @return return empty string if value is null
+   * @return empty string if value is null
    */
   public static String deNull(String value) {
     return Optional.ofNullable(value).orElse("");
@@ -19,7 +22,7 @@ public class CommonUtility {
 
   /**
    * @param value value to deNullify.
-   * @return return empty string if value is null
+   * @return empty string if value is null
    */
   public static String deNull(Object value) {
     return Optional.ofNullable(value).orElse("").toString();
@@ -27,25 +30,30 @@ public class CommonUtility {
 
   /**
    * @param value value to deNullify.
-   * @return return false if value is null
+   * @return false if value is null
    */
   public static Boolean deNull(Boolean value) {
     return Optional.ofNullable(value).orElse(false);
   }
 
   /**
-   * @param headers header of the CSV file
-   * @param rows data of the CSV file
-   * @return byte array of the CSV using commas (;) as separator
+   * @param headers headers of the CSV file
+   * @param rows rows of the CSV file
+   * @return byte array of the CSV using semicolon as separator
    */
   public static byte[] createCsv(List<String> headers, List<List<String>> rows) {
     var csv = new StringBuilder();
     csv.append(String.join(";", headers));
-    rows.forEach(row -> csv.append(System.lineSeparator()).append(String.join(";", row)));
-    return csv.toString().getBytes();
+    rows.forEach(
+        row ->
+            csv.append(System.lineSeparator())
+                .append(String.join(";", row)));
+
+    return csv.toString().getBytes(UTF_8);
   }
 
   public static long getTimelapse(long startTime) {
-    return Calendar.getInstance().getTimeInMillis() - startTime;
+    Instant start = Instant.ofEpochMilli(startTime);
+    return Duration.between(start, Instant.now()).toMillis();
   }
 }
