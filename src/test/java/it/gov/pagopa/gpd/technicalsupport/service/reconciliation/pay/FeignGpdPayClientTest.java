@@ -16,6 +16,7 @@ import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.gpd.GpdPaidPaymen
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.gpd.GpdPayPaymentOptionRequest;
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.gpd.GpdPayRecoveryResult;
 import java.time.LocalDate;
+import java.time.Month;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -111,7 +112,7 @@ class FeignGpdPayClientTest {
 
   private ReconciliationCandidate candidate() {
     return new ReconciliationCandidate(
-        LocalDate.of(2026, 5, 20),
+        LocalDate.of(2026, Month.MAY, 20),
         ServiceType.GPD,
         "payment-position-id",
         "payment-option-id",

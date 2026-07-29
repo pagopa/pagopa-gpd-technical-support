@@ -14,6 +14,7 @@ import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.cosmos.Reconcilia
 import it.gov.pagopa.gpd.technicalsupport.service.reconciliation.key.ReconciliationReportKeyBuilder;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
@@ -161,7 +162,7 @@ class ReconciliationReportDocumentMapperTest {
 
   private ReconciliationCandidate candidate(DebtPositionStatus ppStatus) {
     return new ReconciliationCandidate(
-        LocalDate.of(2026, 5, 20),
+        LocalDate.of(2026, Month.MAY, 20),
         ServiceType.GPD,
         "payment-position-id",
         "payment-option-id",

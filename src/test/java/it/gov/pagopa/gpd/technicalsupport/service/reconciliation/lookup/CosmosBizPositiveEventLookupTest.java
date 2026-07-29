@@ -22,6 +22,7 @@ import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.biz.BizPositiveEv
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.biz.cosmos.BizPositiveEventDocument;
 import it.gov.pagopa.gpd.technicalsupport.service.reconciliation.mapper.BizPositiveEventMapper;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -224,7 +225,7 @@ class CosmosBizPositiveEventLookupTest {
       String nav) {
 
     return new ReconciliationCandidate(
-        LocalDate.of(2026, 6, 10),
+        LocalDate.of(2026, Month.JUNE, 10),
         ServiceType.GPD,
         paymentPositionId,
         paymentOptionId,

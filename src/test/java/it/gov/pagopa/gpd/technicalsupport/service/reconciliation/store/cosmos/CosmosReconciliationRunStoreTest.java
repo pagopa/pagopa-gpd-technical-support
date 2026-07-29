@@ -22,6 +22,7 @@ import it.gov.pagopa.gpd.technicalsupport.service.reconciliation.mapper.Reconcil
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,7 +59,7 @@ class CosmosReconciliationRunStoreTest {
 
     ReconciliationRunCreationResult result =
         store.createOrEvaluateRun(
-            LocalDate.of(2026, 5, 20),
+            LocalDate.of(2026, Month.MAY, 20),
             List.of(ServiceType.WISP, ServiceType.GPD),
             false);
 
@@ -101,7 +102,7 @@ class CosmosReconciliationRunStoreTest {
 
     ReconciliationRunCreationResult result =
         store.createOrEvaluateRun(
-            LocalDate.of(2026, 5, 20),
+            LocalDate.of(2026, Month.MAY, 20),
             List.of(ServiceType.WISP, ServiceType.GPD),
             false);
 

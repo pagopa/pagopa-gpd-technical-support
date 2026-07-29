@@ -10,6 +10,7 @@ import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.biz.BizPositiveEv
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.biz.BizPositiveEventLookupResult;
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.biz.BizPositiveEventLookupStatus;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -105,7 +106,7 @@ class BizPositiveEventLookupTest {
 
   private ReconciliationCandidate candidate(String ec, String nav) {
     return new ReconciliationCandidate(
-        LocalDate.of(2026, 6, 10),
+        LocalDate.of(2026, Month.JUNE, 10),
         ServiceType.GPD,
         "payment-position-id",
         "payment-option-id",
