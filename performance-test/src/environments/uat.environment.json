@@ -1,0 +1,60 @@
+{
+  "environment": [
+    {
+      "env": "uat",
+      "host": "https://api.uat.platform.pagopa.it",
+      "basePath": "/gpd-technical-support/v1",
+      "reconciliationPath": "/internal/position-status-reconciliation",
+      "subscriptionHeader": "Ocp-Apim-Subscription-Key",
+      "apd": {
+        "jdbcUrl": "jdbc:postgresql://gpd-db.u.internal.postgresql.pagopa.it:5432/apd?sslmode=require&prepareThreshold=0",
+        "username": "apduser",
+        "schema": "apd"
+      },
+      "bizCosmos": {
+        "endpoint": "https://pagopa-u-weu-bizevents-ds-cosmos-account.documents.azure.com:443/",
+        "database": "db",
+        "container": "biz-events"
+      },
+	  "bizEvent": {
+		"serviceIdentifier": "GPDTS_PERF_UAT",
+		"pspCode": "ABI03034",
+		"pspBrokerCode": "97249640588",
+		"pspChannelCode": "97249640588_01",
+		"pspCompany": "Banca Agricola Commerciale SpA",
+		"pspTaxCode": "91010030400",
+		"paymentMethod": "creditCard",
+		"touchpoint": "app",
+		"paymentChannel": "app",
+		"bulkChunkSize": 1000
+	  },
+      "reconciliationCosmos": {
+        "endpoint": "https://pagopa-u-weu-gps-cosmos-account.documents.azure.com:443/",
+        "database": "gpd_db",
+        "runsContainer": "gpd-reconciliation-runs",
+        "reportsContainer": "gpd-reconciliation-reports"
+      },
+	  "validation": {
+	    "pollIntervalSeconds": 30,
+	    "completionTimeoutSeconds": 28800,
+	    "reportConsistencyTimeoutSeconds": 600
+	  },
+      "reconciliation": {
+        "serviceTypes": [
+          "GPD"
+        ],
+        "minProcessingDelayDays": 1,
+		"force": true,
+	    "triggerTimeout": "30s"
+      },
+      "testData": {
+        "organizationFiscalCode": "99999999982",
+        "performanceDataPrefix": "GPDTS_PERF_"
+      },
+      "safety": {
+        "dataMutationEnabled": true,
+        "fullDayPurgeEnabled": true
+      }
+    }
+  ]
+}
