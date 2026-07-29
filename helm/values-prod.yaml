@@ -4,7 +4,7 @@ microservice-chart:
   fullnameOverride: ""
   image:
     repository: ghcr.io/pagopa/pagopa-gpd-technical-support
-    tag: "0.0.1-14-PIDM-1995-debt-positions-status-reconciliation"
+    tag: "0.0.2"
     pullPolicy: Always
   livenessProbe:
     handlerType: httpGet
@@ -74,31 +74,25 @@ microservice-chart:
     CORS_CONFIGURATION: '{"origins": ["*"], "methods": ["*"]}'
     DEFAULT_LOGGING_LEVEL: "INFO"
     APP_LOGGING_LEVEL: "INFO"
-
     RECONCILIATION_MAX_PROCESSING_WINDOW_DAYS: "7"
     RECONCILIATION_MIN_PROCESSING_DELAY_DAYS: "1"
     RECONCILIATION_REPORT_PARTITION_BUCKETS: "16"
     RECONCILIATION_CANDIDATE_CHUNK_SIZE: "500"
-
     RECONCILIATION_COSMOS_DATABASE_NAME: "gpd_db"
     RECONCILIATION_COSMOS_RUNS_CONTAINER_NAME: "gpd-reconciliation-runs"
     RECONCILIATION_COSMOS_REPORTS_CONTAINER_NAME: "gpd-reconciliation-reports"
     RECONCILIATION_COSMOS_USE_MANAGED_IDENTITY: "false"
     RECONCILIATION_COSMOS_ENDPOINT: "https://pagopa-p-weu-gps-cosmos-account.documents.azure.com:443/"
-
     RECONCILIATION_APD_MAXIMUM_POOL_SIZE: "5"
     RECONCILIATION_APD_MINIMUM_IDLE: "1"
     RECONCILIATION_APD_CONNECTION_TIMEOUT_MS: "30000"
-
     # Biz+ is read-only and routes reads to the North Europe replica through preferredRegions.
     RECONCILIATION_BIZ_COSMOS_DATABASE_NAME: "db"
     RECONCILIATION_BIZ_COSMOS_CONTAINER_NAME: "biz-events"
     RECONCILIATION_BIZ_COSMOS_USE_MANAGED_IDENTITY: "false"
     RECONCILIATION_BIZ_COSMOS_ENDPOINT: "https://pagopa-p-weu-bizevents-ds-cosmos-account.documents.azure.com:443/"
     RECONCILIATION_BIZ_COSMOS_READ_REGION: "North Europe"
-
     RECONCILIATION_GPD_PAY_BASE_URL: "https://api.platform.pagopa.it/gpd/api/v1"
-
     OTEL_SERVICE_NAME: "pagopa-gpd-technical-support"
     OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=prod"
     OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.elastic-system.svc:4317"

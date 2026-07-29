@@ -2,8 +2,8 @@ apiVersion: v2
 name: pagopa-gpd-technical-support
 description: Microservice exposing technical support APIs for GPD
 type: application
-version: 0.15.0
-appVersion: 0.0.1-14-PIDM-1995-debt-positions-status-reconciliation
+version: 0.16.0
+appVersion: 0.0.2
 dependencies:
   - name: microservice-chart
     version: 8.4.1
