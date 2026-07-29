@@ -2,7 +2,6 @@
   "openapi": "3.1.0",
   "info": {
     "description": "Technical support APIs for GPD",
-    "termsOfService": "https://www.pagopa.gov.it/",
     "title": "GPD Technical Support",
     "version": "0.0.1-2-PIDM-1995-debt-positions-status-reconciliation"
   },
