@@ -15,6 +15,7 @@ import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.apd.Reconciliatio
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -33,7 +34,7 @@ class JdbcPaymentOptionCandidateReaderTest {
 
   @Test
   void forEachCandidateChunk_shouldReadCandidatesByChunksAndMapRows() throws Exception {
-    LocalDate day = LocalDate.of(2026, 6, 10);
+    LocalDate day = LocalDate.of(2026, Month.JUNE, 10);
 
     ResultSet firstRow =
         row(
@@ -138,7 +139,7 @@ class JdbcPaymentOptionCandidateReaderTest {
 
   @Test
   void forEachCandidateChunk_shouldNotEmitChunksWhenNoRowsAreReturned() {
-    LocalDate day = LocalDate.of(2026, 6, 10);
+    LocalDate day = LocalDate.of(2026, Month.JUNE, 10);
 
     mockQueryRows();
 
@@ -155,7 +156,7 @@ class JdbcPaymentOptionCandidateReaderTest {
 
   @Test
   void forEachCandidateChunk_shouldEmitSingleChunkWhenRowsAreLessThanChunkSize() throws Exception {
-    LocalDate day = LocalDate.of(2026, 6, 10);
+    LocalDate day = LocalDate.of(2026, Month.JUNE, 10);
 
     ResultSet firstRow =
         row(

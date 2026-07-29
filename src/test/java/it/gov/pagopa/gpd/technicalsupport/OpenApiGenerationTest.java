@@ -20,24 +20,27 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(
     controllers = PositionStatusReconciliationController.class,
     properties = {
-        "springdoc.api-docs.enabled=true",
-        "springdoc.enable-default-api-docs=true"
+      "springdoc.api-docs.enabled=true",
+      "springdoc.enable-default-api-docs=true"
     })
 @Import(OpenApiConfig.class)
 @EnableConfigurationProperties(SpringDocConfigProperties.class)
 @ImportAutoConfiguration({
-    SpringDocConfiguration.class,
-    SpringDocWebMvcConfiguration.class
+  SpringDocConfiguration.class,
+  SpringDocWebMvcConfiguration.class
 })
 class OpenApiGenerationTest {
 
   @Autowired
   private MockMvc mockMvc;
+
+  @Autowired
+  private JsonMapper objectMapper;
 
   @MockitoBean
   private PositionStatusReconciliationOrchestrator orchestrator;
@@ -45,21 +48,22 @@ class OpenApiGenerationTest {
   @Test
   void swaggerSpringPlugin() throws Exception {
     String openApiJson =
-        mockMvc.perform(get("/v3/api-docs"))
+        mockMvc
+            .perform(get("/v3/api-docs"))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse()
             .getContentAsString(StandardCharsets.UTF_8);
 
-    ObjectMapper objectMapper = new ObjectMapper();
-
     String formattedOpenApiJson =
-        objectMapper.writerWithDefaultPrettyPrinter()
+        objectMapper
+            .writerWithDefaultPrettyPrinter()
             .writeValueAsString(objectMapper.readTree(openApiJson));
 
-    Files.createDirectories(Path.of("openapi"));
+    Path openApiDirectory = Path.of("openapi");
+    Files.createDirectories(openApiDirectory);
     Files.writeString(
-        Path.of("openapi/openapi.json"),
+        openApiDirectory.resolve("openapi.json"),
         formattedOpenApiJson,
         StandardCharsets.UTF_8);
   }

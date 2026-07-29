@@ -8,6 +8,7 @@ import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.cosmos.Reconcilia
 import it.gov.pagopa.gpd.technicalsupport.service.reconciliation.ReconciliationCounters;
 import it.gov.pagopa.gpd.technicalsupport.service.reconciliation.key.ReconciliationKeyBuilder;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -24,7 +25,7 @@ class ReconciliationRunDocumentMapperTest {
 
     ReconciliationRunDocument document =
         mapper.newCreatedRun(
-            LocalDate.of(2026, 5, 20),
+            LocalDate.of(2026, Month.MAY, 20),
             List.of(ServiceType.WISP, ServiceType.GPD),
             "2026-05-20__GPD|WISP__20260526T100000Z",
             now);
@@ -44,7 +45,7 @@ class ReconciliationRunDocumentMapperTest {
 
     ReconciliationRunDocument document =
         mapper.newCreatedRun(
-            LocalDate.of(2026, 5, 20),
+            LocalDate.of(2026, Month.MAY, 20),
             List.of(ServiceType.GPD),
             "2026-05-20__GPD__20260526T100000Z",
             createdAt);
