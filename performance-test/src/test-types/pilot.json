@@ -1,0 +1,24 @@
+{
+  "discardResponseBodies": false,
+  "summaryTrendStats": [
+    "avg",
+    "min",
+    "med",
+    "max",
+    "p(95)",
+    "p(99)",
+    "count"
+  ],
+  "vus": 1,
+  "iterations": 1,
+  "thresholds": {
+    "http_req_failed": [
+      "rate<0.01"
+    ],
+    "http_req_duration": [
+      "p(99)<5000"
+    ]
+  },
+  "setupTimeout": "60s",
+  "teardownTimeout": "60s"
+}

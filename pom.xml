@@ -1,52 +1,62 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xmlns="http://maven.apache.org/POM/4.0.0"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.2.3</version>
+    <version>4.0.6</version>
+    <relativePath/>
   </parent>
 
-  <groupId>it.gov.pagopa</groupId>
-  <artifactId>microservice</artifactId> <!--TODO: set your artifactId-->
-  <version>0.0.0</version>
-  <name>Your Name</name> <!--TODO: set your name-->
-  <description>Your description</description> <!--TODO: set your description-->
+  <groupId>it.gov.pagopa.gpd</groupId>
+  <artifactId>pagopa-gpd-technical-support</artifactId>
+  <version>0.0.1-14-PIDM-1995-debt-positions-status-reconciliation</version>
+  <name>GPD Technical Support</name>
+  <description>Technical support APIs for GPD</description>
 
   <properties>
     <java.version>17</java.version>
+
+    <spring-cloud.version>2025.1.1</spring-cloud.version>
+    <springdoc-openapi.version>3.0.1</springdoc-openapi.version>
+
+    <azure-cosmos.version>4.80.0</azure-cosmos.version>
+    <azure-identity.version>1.18.3</azure-identity.version>
+
+    <logback-ecs-encoder.version>1.7.0</logback-ecs-encoder.version>
+    <jacoco.version>0.8.13</jacoco.version>
+    <sonar-maven-plugin.version>5.1.0.4751</sonar-maven-plugin.version>
+
+    <maven.compiler.release>${java.version}</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
   </properties>
 
+  <dependencyManagement>
+    <dependencies>
+      <!-- Aligns Spring Cloud OpenFeign with Spring Boot 4.x. -->
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-dependencies</artifactId>
+        <version>${spring-cloud.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <dependencies>
+
+    <!-- Spring Boot stack -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-web</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-validation</artifactId>
+      <artifactId>spring-boot-starter-webmvc</artifactId>
     </dependency>
 
-    <!-- Spring utils-->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-devtools</artifactId>
-      <scope>runtime</scope>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-configuration-processor</artifactId>
-      <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-test</artifactId>
-      <scope>test</scope>
-    </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>
@@ -54,84 +64,132 @@
 
     <dependency>
       <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-data-jpa</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.springframework.data</groupId>
-      <artifactId>spring-data-jpa</artifactId>
+      <artifactId>spring-boot-starter-validation</artifactId>
     </dependency>
 
     <dependency>
       <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-cache</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.github.ben-manes.caffeine</groupId>
-      <artifactId>caffeine</artifactId>
+      <artifactId>spring-boot-starter-aspectj</artifactId>
     </dependency>
 
-    <!-- Swagger/OpenAPI -->
+    <!-- JDBC is used instead of JPA to stream/chunk high-volume APD reads. -->
     <dependency>
-      <groupId>org.springdoc</groupId>
-      <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-      <version>2.3.0</version>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-jdbc</artifactId>
     </dependency>
 
     <dependency>
-      <groupId>com.h2database</groupId>
-      <artifactId>h2</artifactId>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
       <scope>runtime</scope>
     </dependency>
 
-    <dependency>
-      <groupId>org.hibernate.orm</groupId>
-      <artifactId>hibernate-core</artifactId>
-      <version>6.1.3.Final</version>
-    </dependency>
-
+    <!-- Feign client -->
     <dependency>
       <groupId>org.springframework.cloud</groupId>
       <artifactId>spring-cloud-starter-openfeign</artifactId>
-      <version>4.1.2</version>
     </dependency>
 
-    <!-- utilities -->
+    <!-- Cosmos DB NoSQL SDK -->
     <dependency>
-      <groupId>org.modelmapper</groupId>
-      <artifactId>modelmapper</artifactId>
-      <version>3.1.0</version>
+      <groupId>com.azure</groupId>
+      <artifactId>azure-cosmos</artifactId>
+      <version>${azure-cosmos.version}</version>
     </dependency>
+
+    <!-- Enables Managed Identity for Azure clients. -->
+    <dependency>
+      <groupId>com.azure</groupId>
+      <artifactId>azure-identity</artifactId>
+      <version>${azure-identity.version}</version>
+    </dependency>
+
+    <!-- Swagger/OpenAPI generation for Spring Boot 4. -->
+    <dependency>
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+      <version>${springdoc-openapi.version}</version>
+    </dependency>
+
+    <!-- Structured ECS logging. -->
+    <dependency>
+      <groupId>co.elastic.logging</groupId>
+      <artifactId>logback-ecs-encoder</artifactId>
+      <version>${logback-ecs-encoder.version}</version>
+    </dependency>
+
+    <!-- Configuration metadata generation for @ConfigurationProperties. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-configuration-processor</artifactId>
+      <optional>true</optional>
+    </dependency>
+
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
       <optional>true</optional>
     </dependency>
 
+    <!-- Test dependencies -->
     <dependency>
-      <groupId>co.elastic.logging</groupId>
-      <artifactId>logback-ecs-encoder</artifactId>
-      <version>1.5.0</version>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
     </dependency>
+    
+    <dependency>
+       <groupId>org.springframework.boot</groupId>
+       <artifactId>spring-boot-starter-webmvc-test</artifactId>
+       <scope>test</scope>
+    </dependency>
+
+    <dependency>
+       <groupId>org.testcontainers</groupId>
+       <artifactId>testcontainers-junit-jupiter</artifactId>
+       <scope>test</scope>
+    </dependency>
+
+    <dependency>
+       <groupId>org.testcontainers</groupId>
+       <artifactId>testcontainers-postgresql</artifactId>
+       <scope>test</scope>
+    </dependency>
+
   </dependencies>
 
   <build>
     <plugins>
+
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+            </exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <release>${java.version}</release>
+          <parameters>true</parameters>
+        </configuration>
       </plugin>
 
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
-        <version>0.8.7</version>
-        <configuration>
-          <excludes>
-          </excludes>
-        </configuration>
+        <version>${jacoco.version}</version>
         <executions>
           <execution>
+            <id>prepare-agent</id>
             <goals>
               <goal>prepare-agent</goal>
             </goals>
@@ -145,20 +203,23 @@
           </execution>
         </executions>
       </plugin>
+
+      <!-- Kept available for CI/CD usage, but not bound to mvn verify locally. -->
       <plugin>
         <groupId>org.sonarsource.scanner.maven</groupId>
         <artifactId>sonar-maven-plugin</artifactId>
-        <version>3.3.0.603</version>
-        <executions>
-          <execution>
-            <phase>verify</phase>
-            <goals>
-              <goal>sonar</goal>
-            </goals>
-          </execution>
-        </executions>
+        <version>${sonar-maven-plugin.version}</version>
       </plugin>
+
     </plugins>
+    
+    <resources>
+       <resource>
+         <directory>src/main/resources</directory>
+         <filtering>true</filtering>
+      </resource>
+    </resources>
+
     <testResources>
       <testResource>
         <directory>src/test/resources</directory>

@@ -24,6 +24,13 @@ on:
         type: boolean
         description: 'Mark the release as canary on AKS'
         default: false
+    secrets: 
+      CD_CLIENT_ID: 
+        required: true 
+      TENANT_ID: 
+        required: true 
+      SUBSCRIPTION_ID: 
+        required: true
 
 env:
   NAMESPACE: gps
@@ -41,7 +48,7 @@ jobs:
     environment: ${{ inputs.environment }}
     steps:
       - name: Deploy
-        uses: pagopa/github-actions-template/aks-deploy@main
+        uses: pagopa/github-actions-template/aks-deploy@713f5abd8f8ee210e5f6a4243ae52eb7c1b3b5ab
         with:
           branch: ${{ inputs.branch }}
           client_id: ${{ secrets.CD_CLIENT_ID }}
@@ -51,8 +58,8 @@ jobs:
           namespace: ${{ vars.NAMESPACE }}
           cluster_name: ${{ vars.CLUSTER_NAME }}
           resource_group: ${{ vars.CLUSTER_RESOURCE_GROUP }}
-          app_name: ${{ env.APP_NAME }}${{inputs.suffix_name}}
-          helm_upgrade_options: "--debug --set microservice-chart.azure.workloadIdentityClientId=${{vars.WORKLOAD_IDENTITY_ID}} --set microservice-chart.canaryDelivery.ingress.weightPercent=${{ inputs.traffic_weight }} --set microservice-chart.canaryDelivery.create=${{ inputs.is_canary }}" # TODO review according to chart app name
+          app_name: '${{ env.APP_NAME }}${{ inputs.suffix_name }}'
+          helm_upgrade_options: '--debug --set microservice-chart.azure.workloadIdentityClientId=${{ vars.WORKLOAD_IDENTITY_ID }} --set microservice-chart.canaryDelivery.ingress.weightPercent=${{ inputs.traffic_weight }} --set microservice-chart.canaryDelivery.create=${{ inputs.is_canary }}'
           timeout: '10m0s'
 
   update_openapi:
@@ -104,4 +111,5 @@ jobs:
 
           cd ./infra
 
+          bash ./terraform.sh init weu-${{ inputs.environment }}
           bash ./terraform.sh apply weu-${{ inputs.environment }} -auto-approve

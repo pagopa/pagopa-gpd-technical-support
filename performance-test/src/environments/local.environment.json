@@ -1,0 +1,60 @@
+{
+  "environment": [
+    {
+      "env": "local",
+      "host": "http://localhost:8080",
+      "basePath": "",
+      "reconciliationPath": "/internal/position-status-reconciliation",
+      "subscriptionHeader": "Ocp-Apim-Subscription-Key",
+      "apd": {
+        "jdbcUrl": "jdbc:postgresql://apd-local:5432/apd",
+        "username": "apduser",
+        "schema": "apd"
+      },
+      "bizCosmos": {
+        "endpoint": "https://host.docker.internal:8081/",
+        "database": "db",
+        "container": "biz-events"
+      },
+	  "bizEvent": {
+	    "serviceIdentifier": "GPDTS_PERF_LOCAL",
+	    "pspCode": "ABI03034",
+	    "pspBrokerCode": "97249640588",
+	    "pspChannelCode": "97249640588_01",
+	    "pspCompany": "Banca Agricola Commerciale SpA",
+	    "pspTaxCode": "91010030400",
+	    "paymentMethod": "creditCard",
+	    "touchpoint": "app",
+	    "paymentChannel": "app",
+	    "bulkChunkSize": 1000
+	  },
+      "reconciliationCosmos": {
+        "endpoint": "https://host.docker.internal:8081/",
+        "database": "gpd_db",
+        "runsContainer": "gpd-reconciliation-runs",
+        "reportsContainer": "gpd-reconciliation-reports"
+      },
+	  "validation": {
+	    "pollIntervalSeconds": 5,
+	    "completionTimeoutSeconds": 7200,
+	    "reportConsistencyTimeoutSeconds": 120
+	  },
+      "reconciliation": {
+        "serviceTypes": [
+          "GPD"
+        ],
+        "minProcessingDelayDays": 1,
+		"force": false,
+		"triggerTimeout": "30s"
+      },
+      "testData": {
+        "organizationFiscalCode": "99999999982",
+        "performanceDataPrefix": "GPDTS_PERF_"
+      },
+      "safety": {
+        "dataMutationEnabled": true,
+        "fullDayPurgeEnabled": true
+      }
+    }
+  ]
+}
