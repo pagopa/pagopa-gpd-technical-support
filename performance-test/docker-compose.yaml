@@ -68,7 +68,7 @@ services:
       - /scripts/data-validation/apd/validate-reconciliation-result.sh
 
   apd-local:
-    image: postgres:15.17-alpine
+    image: postgres:15.17-alpine@sha256:09e4f20b14ddb3dfe3a0c825b206032aaf8f28300ba2070c0b60fc1c10c6abc7
     container_name: gpd-technical-support-apd-local
     profiles:
       - local
