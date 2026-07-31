@@ -13,7 +13,7 @@ resource "azurerm_api_management_api_version_set" "api_version_set" {
 }
 
 module "api_v1" {
-  source = "git::https://github.com/pagopa/terraform-azurerm-v3.git//api_management_api?ref=v6.7.0"
+  source = "git::https://github.com/pagopa/terraform-azurerm-v4.git//api_management_api?ref=v10.22.0"
 
   name                  = format("%s-%s", var.env_short, local.gpd_technical_support_api.name)
   api_management_name   = local.apim.name
@@ -44,7 +44,7 @@ module "api_v1" {
 resource "azurerm_api_management_subscription" "gpd_technical_support_gpd_pay_subkey" {
   api_management_name = local.apim.name
   resource_group_name = local.apim.rg
-  api_id              = module.api_v1.id
+  api_id              = split(";", module.api_v1.id)[0]
   display_name        = "GPD Technical Support for GPD PAY recovery"
   allow_tracing       = false
   state               = "active"

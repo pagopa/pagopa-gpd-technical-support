@@ -156,6 +156,19 @@ if [ -n "$env" ]; then
     exit 1
   fi
   az account set -s "${subscription}"
+  
+  ARM_SUBSCRIPTION_ID="$(
+    az account show \
+      --query id \
+      --output tsv
+  )"
+
+  if [ -z "$ARM_SUBSCRIPTION_ID" ]; then
+    echo "Unable to resolve Azure subscription ID"
+    exit 1
+  fi
+
+  export ARM_SUBSCRIPTION_ID
 fi
 
 # Call appropriate function based on action
@@ -168,7 +181,6 @@ case $action in
     ;;
   init)
     init_terraform
-    init_terraform "$other"
     ;;
   list)
     list_env
