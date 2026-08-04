@@ -1,12 +1,15 @@
 package it.gov.pagopa.gpd.technicalsupport.service.reconciliation.reader;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import it.gov.pagopa.gpd.technicalsupport.model.gpd.DebtPositionStatus;
 import it.gov.pagopa.gpd.technicalsupport.model.gpd.PaymentOptionStatus;
@@ -15,12 +18,14 @@ import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.apd.Reconciliatio
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Month;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.springframework.jdbc.core.RowCallbackHandler;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
@@ -33,15 +38,26 @@ class JdbcPaymentOptionCandidateReaderTest {
       new JdbcPaymentOptionCandidateReader(jdbcTemplate);
 
   @Test
-  void forEachCandidateChunk_shouldReadCandidatesByChunksAndMapRows() throws Exception {
+  void forEachCandidateChunk_shouldReadCandidatesByChunksAndMapRows()
+      throws Exception {
+
     LocalDate day = LocalDate.of(2026, Month.JUNE, 10);
+
+    LocalDateTime firstInsertedDate =
+        day.atTime(0, 0, 1);
+
+    LocalDateTime secondInsertedDate =
+        day.atTime(0, 0, 2);
+
+    LocalDateTime thirdInsertedDate =
+        day.atTime(0, 0, 3);
 
     ResultSet firstRow =
         row(
-            day,
+            firstInsertedDate,
             "GPD",
-            "payment-position-id-1",
-            "payment-option-id-1",
+            1L,
+            101L,
             "77777777777",
             "302131563536065220",
             "02131563536065220",
@@ -51,10 +67,10 @@ class JdbcPaymentOptionCandidateReaderTest {
 
     ResultSet secondRow =
         row(
-            day,
+            secondInsertedDate,
             "WISP",
-            "payment-position-id-2",
-            "payment-option-id-2",
+            2L,
+            102L,
             "88888888888",
             "302131563536065221",
             "02131563536065221",
@@ -64,10 +80,10 @@ class JdbcPaymentOptionCandidateReaderTest {
 
     ResultSet thirdRow =
         row(
-            day,
+            thirdInsertedDate,
             "GPD",
-            "payment-position-id-3",
-            "payment-option-id-3",
+            3L,
+            103L,
             "99999999999",
             "302131563536065222",
             "02131563536065222",
@@ -77,11 +93,15 @@ class JdbcPaymentOptionCandidateReaderTest {
 
     mockQueryRows(firstRow, secondRow, thirdRow);
 
-    List<List<ReconciliationCandidate>> chunks = new ArrayList<>();
+    List<List<ReconciliationCandidate>> chunks =
+        new ArrayList<>();
 
     reader.forEachCandidateChunk(
         day,
-        List.of(ServiceType.GPD, ServiceType.GPD, ServiceType.WISP),
+        List.of(
+            ServiceType.GPD,
+            ServiceType.GPD,
+            ServiceType.WISP),
         2,
         chunks::add);
 
@@ -89,30 +109,67 @@ class JdbcPaymentOptionCandidateReaderTest {
     assertThat(chunks.get(0)).hasSize(2);
     assertThat(chunks.get(1)).hasSize(1);
 
-    ReconciliationCandidate firstCandidate = chunks.get(0).get(0);
+    ReconciliationCandidate firstCandidate =
+        chunks.get(0).get(0);
 
-    assertThat(firstCandidate.day()).isEqualTo(day);
-    assertThat(firstCandidate.serviceType()).isEqualTo(ServiceType.GPD);
-    assertThat(firstCandidate.paymentPositionId()).isEqualTo("payment-position-id-1");
-    assertThat(firstCandidate.paymentOptionId()).isEqualTo("payment-option-id-1");
-    assertThat(firstCandidate.ec()).isEqualTo("77777777777");
-    assertThat(firstCandidate.nav()).isEqualTo("302131563536065220");
-    assertThat(firstCandidate.iuv()).isEqualTo("02131563536065220");
-    assertThat(firstCandidate.ppStatus()).isEqualTo(DebtPositionStatus.VALID);
-    assertThat(firstCandidate.poStatus()).isEqualTo(PaymentOptionStatus.PO_UNPAID);
-    assertThat(firstCandidate.paymentPlanId()).isEqualTo("SINGLE_OPTION");
+    assertThat(firstCandidate.day())
+        .isEqualTo(day);
 
-    ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+    assertThat(firstCandidate.serviceType())
+        .isEqualTo(ServiceType.GPD);
+
+    assertThat(firstCandidate.paymentPositionId())
+        .isEqualTo("1");
+
+    assertThat(firstCandidate.paymentOptionId())
+        .isEqualTo("101");
+
+    assertThat(firstCandidate.ec())
+        .isEqualTo("77777777777");
+
+    assertThat(firstCandidate.nav())
+        .isEqualTo("302131563536065220");
+
+    assertThat(firstCandidate.iuv())
+        .isEqualTo("02131563536065220");
+
+    assertThat(firstCandidate.ppStatus())
+        .isEqualTo(DebtPositionStatus.VALID);
+
+    assertThat(firstCandidate.poStatus())
+        .isEqualTo(PaymentOptionStatus.PO_UNPAID);
+
+    assertThat(firstCandidate.paymentPlanId())
+        .isEqualTo("SINGLE_OPTION");
+
+    ReconciliationCandidate thirdCandidate =
+        chunks.get(1).get(0);
+
+    assertThat(thirdCandidate.paymentPositionId())
+        .isEqualTo("3");
+
+    assertThat(thirdCandidate.paymentOptionId())
+        .isEqualTo("103");
+
+    assertThat(thirdCandidate.ppStatus())
+        .isEqualTo(DebtPositionStatus.PARTIALLY_PAID);
+
+    ArgumentCaptor<String> sqlCaptor =
+        ArgumentCaptor.forClass(String.class);
+
     ArgumentCaptor<MapSqlParameterSource> paramsCaptor =
         ArgumentCaptor.forClass(MapSqlParameterSource.class);
 
-    verify(jdbcTemplate)
+    verify(jdbcTemplate, times(2))
         .query(
             sqlCaptor.capture(),
             paramsCaptor.capture(),
-            any(RowCallbackHandler.class));
+            any(RowMapper.class));
 
-    assertThat(sqlCaptor.getValue())
+    String sql =
+        sqlCaptor.getAllValues().get(0);
+
+    assertThat(sql)
         .contains("FROM apd.payment_position pp")
         .contains("JOIN apd.payment_option po")
         .contains("pp.inserted_date >= :dayStart")
@@ -121,29 +178,89 @@ class JdbcPaymentOptionCandidateReaderTest {
         .contains("po.status = 'PO_UNPAID'")
         .contains("pp.archived = false")
         .contains("po.archived = false")
+        .contains(":lastInsertedDate")
+        .contains(":lastPaymentPositionId")
+        .contains(":lastPaymentOptionId")
         .contains("pp.status <> 'PARTIALLY_PAID'")
         .contains("po.payment_plan_id IS NOT NULL")
-        .contains("po_paid.status = 'PO_PAID'");
+        .contains("po_paid.status = 'PO_PAID'")
+        .contains("ORDER BY")
+        .contains("LIMIT :chunkSize");
 
-    MapSqlParameterSource params = paramsCaptor.getValue();
+    List<MapSqlParameterSource> capturedParams =
+        paramsCaptor.getAllValues();
 
-    assertThat(params.getValue("dayStart"))
-        .isEqualTo(Timestamp.valueOf(day.atStartOfDay()));
+    MapSqlParameterSource firstPageParams =
+        capturedParams.get(0);
 
-    assertThat(params.getValue("dayEnd"))
-        .isEqualTo(Timestamp.valueOf(day.plusDays(1).atStartOfDay()));
+    MapSqlParameterSource secondPageParams =
+        capturedParams.get(1);
 
-    assertThat(params.getValue("serviceTypes"))
+    assertThat(firstPageParams.getValue("dayStart"))
+        .isEqualTo(
+            Timestamp.valueOf(day.atStartOfDay()));
+
+    assertThat(firstPageParams.getValue("dayEnd"))
+        .isEqualTo(
+            Timestamp.valueOf(
+                day.plusDays(1).atStartOfDay()));
+
+    assertThat(firstPageParams.getValue("serviceTypes"))
         .isEqualTo(List.of("GPD", "WISP"));
+
+    assertThat(firstPageParams.getValue("chunkSize"))
+        .isEqualTo(2);
+
+    /*
+     * The first page starts from the minimum possible composite cursor
+     * for the selected processing day.
+     */
+    assertThat(firstPageParams.getValue("lastInsertedDate"))
+        .isEqualTo(
+            Timestamp.valueOf(day.atStartOfDay()));
+
+    assertThat(
+        firstPageParams.getValue(
+            "lastPaymentPositionId"))
+        .isEqualTo(Long.MIN_VALUE);
+
+    assertThat(
+        firstPageParams.getValue(
+            "lastPaymentOptionId"))
+        .isEqualTo(Long.MIN_VALUE);
+
+    /*
+     * The second page must start from the composite key of the last row
+     * returned by the first page.
+     */
+    assertThat(secondPageParams.getValue("lastInsertedDate"))
+        .isEqualTo(
+            Timestamp.valueOf(secondInsertedDate));
+
+    assertThat(
+        secondPageParams.getValue(
+            "lastPaymentPositionId"))
+        .isEqualTo(2L);
+
+    assertThat(
+        secondPageParams.getValue(
+            "lastPaymentOptionId"))
+        .isEqualTo(102L);
+
+    assertThat(secondPageParams.getValue("chunkSize"))
+        .isEqualTo(2);
   }
 
   @Test
   void forEachCandidateChunk_shouldNotEmitChunksWhenNoRowsAreReturned() {
-    LocalDate day = LocalDate.of(2026, Month.JUNE, 10);
+
+    LocalDate day =
+        LocalDate.of(2026, Month.JUNE, 10);
 
     mockQueryRows();
 
-    List<List<ReconciliationCandidate>> chunks = new ArrayList<>();
+    List<List<ReconciliationCandidate>> chunks =
+        new ArrayList<>();
 
     reader.forEachCandidateChunk(
         day,
@@ -152,18 +269,43 @@ class JdbcPaymentOptionCandidateReaderTest {
         chunks::add);
 
     assertThat(chunks).isEmpty();
+
+    ArgumentCaptor<MapSqlParameterSource> paramsCaptor =
+        ArgumentCaptor.forClass(MapSqlParameterSource.class);
+
+    verify(jdbcTemplate)
+        .query(
+            anyString(),
+            paramsCaptor.capture(),
+            any(RowMapper.class));
+
+    MapSqlParameterSource params =
+        paramsCaptor.getValue();
+
+    assertThat(params.getValue("lastInsertedDate"))
+        .isEqualTo(
+            Timestamp.valueOf(day.atStartOfDay()));
+
+    assertThat(params.getValue("lastPaymentPositionId"))
+        .isEqualTo(Long.MIN_VALUE);
+
+    assertThat(params.getValue("lastPaymentOptionId"))
+        .isEqualTo(Long.MIN_VALUE);
   }
 
   @Test
-  void forEachCandidateChunk_shouldEmitSingleChunkWhenRowsAreLessThanChunkSize() throws Exception {
-    LocalDate day = LocalDate.of(2026, Month.JUNE, 10);
+  void forEachCandidateChunk_shouldEmitSingleChunkWhenRowsAreLessThanChunkSize()
+      throws Exception {
+
+    LocalDate day =
+        LocalDate.of(2026, Month.JUNE, 10);
 
     ResultSet firstRow =
         row(
-            day,
+            day.atTime(0, 0, 1),
             "GPD",
-            "payment-position-id-1",
-            "payment-option-id-1",
+            1L,
+            101L,
             "77777777777",
             "302131563536065220",
             "02131563536065220",
@@ -173,10 +315,10 @@ class JdbcPaymentOptionCandidateReaderTest {
 
     ResultSet secondRow =
         row(
-            day,
+            day.atTime(0, 0, 2),
             "GPD",
-            "payment-position-id-2",
-            "payment-option-id-2",
+            2L,
+            102L,
             "77777777777",
             "302131563536065221",
             "02131563536065221",
@@ -186,7 +328,8 @@ class JdbcPaymentOptionCandidateReaderTest {
 
     mockQueryRows(firstRow, secondRow);
 
-    List<List<ReconciliationCandidate>> chunks = new ArrayList<>();
+    List<List<ReconciliationCandidate>> chunks =
+        new ArrayList<>();
 
     reader.forEachCandidateChunk(
         day,
@@ -196,31 +339,114 @@ class JdbcPaymentOptionCandidateReaderTest {
 
     assertThat(chunks).hasSize(1);
     assertThat(chunks.get(0)).hasSize(2);
+
+    assertThat(chunks.get(0).get(0).paymentPositionId())
+        .isEqualTo("1");
+
+    assertThat(chunks.get(0).get(1).paymentPositionId())
+        .isEqualTo("2");
+
+    assertThat(chunks.get(0).get(1).ppStatus())
+        .isEqualTo(DebtPositionStatus.INVALID);
+
+    verify(jdbcTemplate)
+        .query(
+            anyString(),
+            any(MapSqlParameterSource.class),
+            any(RowMapper.class));
+  }
+  
+  @Test
+  void forEachCandidateChunk_shouldRejectNonPositiveChunkSize() {
+
+    LocalDate day =
+        LocalDate.of(2026, Month.JUNE, 10);
+
+    assertThatThrownBy(
+            () ->
+                reader.forEachCandidateChunk(
+                    day,
+                    List.of(ServiceType.GPD),
+                    0,
+                    candidates -> {
+                      // The consumer must never be invoked.
+                    }))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("chunkSize must be greater than zero");
+
+    verifyNoInteractions(jdbcTemplate);
   }
 
+  @Test
+  void forEachCandidateChunk_shouldReturnWithoutQueryWhenServiceTypesAreEmpty() {
+
+    LocalDate day =
+        LocalDate.of(2026, Month.JUNE, 10);
+
+    List<List<ReconciliationCandidate>> chunks =
+        new ArrayList<>();
+
+    reader.forEachCandidateChunk(
+        day,
+        List.of(),
+        100,
+        chunks::add);
+
+    assertThat(chunks).isEmpty();
+
+    verifyNoInteractions(jdbcTemplate);
+  }
+
+  @SuppressWarnings({"rawtypes", "unchecked"})
   private void mockQueryRows(ResultSet... rows) {
+
+    AtomicInteger nextRowIndex =
+        new AtomicInteger();
+
     doAnswer(
             invocation -> {
-              RowCallbackHandler rowCallbackHandler = invocation.getArgument(2);
+              MapSqlParameterSource params =
+                  invocation.getArgument(1);
 
-              for (ResultSet row : rows) {
-                rowCallbackHandler.processRow(row);
+              RowMapper<Object> rowMapper =
+                  invocation.getArgument(2);
+
+              int chunkSize =
+                  ((Number) params.getValue("chunkSize"))
+                      .intValue();
+
+              List<Object> page =
+                  new ArrayList<>();
+
+              while (
+                  page.size() < chunkSize
+                      && nextRowIndex.get() < rows.length) {
+
+                ResultSet resultSet =
+                    rows[nextRowIndex.getAndIncrement()];
+
+                Object mappedRow =
+                    rowMapper.mapRow(
+                        resultSet,
+                        page.size());
+
+                page.add(mappedRow);
               }
 
-              return null;
+              return page;
             })
         .when(jdbcTemplate)
         .query(
             anyString(),
             any(MapSqlParameterSource.class),
-            any(RowCallbackHandler.class));
+            any(RowMapper.class));
   }
 
   private ResultSet row(
-      LocalDate day,
+      LocalDateTime insertedDate,
       String serviceType,
-      String paymentPositionId,
-      String paymentOptionId,
+      long paymentPositionId,
+      long paymentOptionId,
       String ec,
       String nav,
       String iuv,
@@ -229,19 +455,44 @@ class JdbcPaymentOptionCandidateReaderTest {
       String paymentPlanId)
       throws Exception {
 
-    ResultSet rs = mock(ResultSet.class);
+    ResultSet resultSet =
+        mock(ResultSet.class);
 
-    when(rs.getObject("day", LocalDate.class)).thenReturn(day);
-    when(rs.getString("service_type")).thenReturn(serviceType);
-    when(rs.getString("payment_position_id")).thenReturn(paymentPositionId);
-    when(rs.getString("payment_option_id")).thenReturn(paymentOptionId);
-    when(rs.getString("ec")).thenReturn(ec);
-    when(rs.getString("nav")).thenReturn(nav);
-    when(rs.getString("iuv")).thenReturn(iuv);
-    when(rs.getString("pp_status")).thenReturn(ppStatus);
-    when(rs.getString("po_status")).thenReturn(poStatus);
-    when(rs.getString("payment_plan_id")).thenReturn(paymentPlanId);
+    when(resultSet.getTimestamp("inserted_date"))
+        .thenReturn(
+            Timestamp.valueOf(insertedDate));
 
-    return rs;
+    when(resultSet.getObject("day", LocalDate.class))
+        .thenReturn(
+            insertedDate.toLocalDate());
+
+    when(resultSet.getString("service_type"))
+        .thenReturn(serviceType);
+
+    when(resultSet.getLong("payment_position_id"))
+        .thenReturn(paymentPositionId);
+
+    when(resultSet.getLong("payment_option_id"))
+        .thenReturn(paymentOptionId);
+
+    when(resultSet.getString("ec"))
+        .thenReturn(ec);
+
+    when(resultSet.getString("nav"))
+        .thenReturn(nav);
+
+    when(resultSet.getString("iuv"))
+        .thenReturn(iuv);
+
+    when(resultSet.getString("pp_status"))
+        .thenReturn(ppStatus);
+
+    when(resultSet.getString("po_status"))
+        .thenReturn(poStatus);
+
+    when(resultSet.getString("payment_plan_id"))
+        .thenReturn(paymentPlanId);
+
+    return resultSet;
   }
 }
