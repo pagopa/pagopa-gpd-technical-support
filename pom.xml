@@ -14,7 +14,7 @@
 
   <groupId>it.gov.pagopa.gpd</groupId>
   <artifactId>pagopa-gpd-technical-support</artifactId>
-  <version>0.0.5</version>
+  <version>0.0.5-1-PIDM-2314-operation-timeout</version>
   <name>GPD Technical Support</name>
   <description>Technical support APIs for GPD</description>
 
