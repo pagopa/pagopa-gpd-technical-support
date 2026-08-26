@@ -15,8 +15,10 @@ import it.gov.pagopa.gpd.technicalsupport.config.reconciliation.ReconciliationPr
 import it.gov.pagopa.gpd.technicalsupport.model.gpd.DebtPositionStatus;
 import it.gov.pagopa.gpd.technicalsupport.model.gpd.PaymentOptionStatus;
 import it.gov.pagopa.gpd.technicalsupport.model.gpd.ServiceType;
+import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.ReconciliationOutcome;
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.ReconciliationRunCreationResult;
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.ReconciliationRunStatus;
+import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.ReconciliationStatus;
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.apd.ReconciliationCandidate;
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.biz.BizPositiveEvent;
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.biz.BizPositiveEventLookupResult;
@@ -37,6 +39,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 class PositionStatusReconciliationProcessorTest {
@@ -205,71 +210,52 @@ class PositionStatusReconciliationProcessorTest {
     verify(gpdPayClient).executePayRecovery(candidate, event);
     verify(reportStore).save(Mockito.any(ReconciliationReportDocument.class));
   }
+  
+  @ParameterizedTest
+  @CsvSource({ "EXPIRED, POSITIVE_EVENT_FOUND_EXPIRED_PAY_EXECUTED",
+      "INVALID, POSITIVE_EVENT_FOUND_INVALID_PAY_EXECUTED" })
+  void process_shouldRecoverInvalidOrExpiredPositionWithSpecificOutcome(DebtPositionStatus initialStatus,
+      ReconciliationOutcome expectedOutcome) {
 
-  @Test
-  void process_shouldWriteManualRequiredReportWhenPositiveEventFoundForExpiredPosition() {
     ReconciliationRunCreationResult run = run();
-    ReconciliationCandidate candidate = candidate(DebtPositionStatus.EXPIRED);
+    ReconciliationCandidate candidate = candidate(initialStatus);
     BizPositiveEvent event = bizPositiveEvent(candidate);
 
     mockCandidateReader(run, List.of(candidate));
 
     when(bizPositiveEventLookup.findPositiveEvents(List.of(candidate)))
-        .thenReturn(
-            Map.of(
-                BizPositiveEventLookup.key(candidate),
-                BizPositiveEventLookupResult.found(event)));
+        .thenReturn(Map.of(BizPositiveEventLookup.key(candidate), BizPositiveEventLookupResult.found(event)));
+
+    when(gpdPayClient.executePayRecovery(candidate, event)).thenReturn(GpdPayRecoveryResult.success());
 
     ReconciliationCounters counters = processor.process(run);
 
     assertThat(counters.scanned()).isEqualTo(1);
     assertThat(counters.positiveEventsFound()).isEqualTo(1);
     assertThat(counters.reconciliationCases()).isEqualTo(1);
-    assertThat(counters.recovered()).isZero();
-    assertThat(counters.manualRequired()).isEqualTo(1);
+    assertThat(counters.recovered()).isEqualTo(1);
+    assertThat(counters.manualRequired()).isZero();
     assertThat(counters.technicalFailures()).isZero();
-    assertThat(counters.payExecuted()).isZero();
+    assertThat(counters.payExecuted()).isEqualTo(1);
     assertThat(counters.payFailed()).isZero();
-    assertThat(counters.notRecovered()).isEqualTo(1);
+    assertThat(counters.notRecovered()).isZero();
 
     verifyCandidateReaderCalled(run);
-    verify(bizPositiveEventLookup).findPositiveEvents(List.of(candidate));
-    verify(bizPositiveEventLookup, never()).findPositiveEvent(Mockito.any());
-    verify(gpdPayClient, never()).executePayRecovery(Mockito.any(), Mockito.any());
-    verify(reportStore).save(Mockito.any(ReconciliationReportDocument.class));
-  }
+    verify(gpdPayClient).executePayRecovery(candidate, event);
 
-  @Test
-  void process_shouldWriteManualRequiredReportWhenPositiveEventFoundForInvalidPosition() {
-    ReconciliationRunCreationResult run = run();
-    ReconciliationCandidate candidate = candidate(DebtPositionStatus.INVALID);
-    BizPositiveEvent event = bizPositiveEvent(candidate);
+    ArgumentCaptor<ReconciliationReportDocument> savedReport = ArgumentCaptor
+        .forClass(ReconciliationReportDocument.class);
 
-    mockCandidateReader(run, List.of(candidate));
+    verify(reportStore).save(savedReport.capture());
 
-    when(bizPositiveEventLookup.findPositiveEvents(List.of(candidate)))
-        .thenReturn(
-            Map.of(
-                BizPositiveEventLookup.key(candidate),
-                BizPositiveEventLookupResult.found(event)));
+    ReconciliationReportDocument report = savedReport.getValue();
 
-    ReconciliationCounters counters = processor.process(run);
-
-    assertThat(counters.scanned()).isEqualTo(1);
-    assertThat(counters.positiveEventsFound()).isEqualTo(1);
-    assertThat(counters.reconciliationCases()).isEqualTo(1);
-    assertThat(counters.recovered()).isZero();
-    assertThat(counters.manualRequired()).isEqualTo(1);
-    assertThat(counters.technicalFailures()).isZero();
-    assertThat(counters.payExecuted()).isZero();
-    assertThat(counters.payFailed()).isZero();
-    assertThat(counters.notRecovered()).isEqualTo(1);
-
-    verifyCandidateReaderCalled(run);
-    verify(bizPositiveEventLookup).findPositiveEvents(List.of(candidate));
-    verify(bizPositiveEventLookup, never()).findPositiveEvent(Mockito.any());
-    verify(gpdPayClient, never()).executePayRecovery(Mockito.any(), Mockito.any());
-    verify(reportStore).save(Mockito.any(ReconciliationReportDocument.class));
+    assertThat(report.reconciliationStatus()).isEqualTo(ReconciliationStatus.RECOVERED);
+    assertThat(report.outcome()).isEqualTo(expectedOutcome);
+    assertThat(report.ppStatus()).isEqualTo(initialStatus);
+    assertThat(report.bizId()).isEqualTo(event.eventId());
+    assertThat(report.payInvoked()).isTrue();
+    assertThat(report.paySucceeded()).isTrue();
   }
 
   @Test
@@ -292,7 +278,7 @@ class PositionStatusReconciliationProcessorTest {
             "00000000000000002",
             DebtPositionStatus.VALID);
 
-    ReconciliationCandidate manualRequiredCandidate =
+    ReconciliationCandidate expiredRecoveredCandidate =
         candidate(
             "payment-position-id-3",
             "payment-option-id-3",
@@ -309,14 +295,14 @@ class PositionStatusReconciliationProcessorTest {
             DebtPositionStatus.VALID);
 
     BizPositiveEvent recoveredEvent = bizPositiveEvent(recoveredCandidate);
-    BizPositiveEvent manualRequiredEvent = bizPositiveEvent(manualRequiredCandidate);
+    BizPositiveEvent expiredRecoveredEvent = bizPositiveEvent(expiredRecoveredCandidate);
     BizPositiveEvent payFailedEvent = bizPositiveEvent(payFailedCandidate);
 
     List<ReconciliationCandidate> firstChunk =
         List.of(notFoundCandidate, recoveredCandidate);
 
     List<ReconciliationCandidate> secondChunk =
-        List.of(manualRequiredCandidate, payFailedCandidate);
+        List.of(expiredRecoveredCandidate, payFailedCandidate);
 
     mockCandidateReaderChunks(run, firstChunk, secondChunk);
 
@@ -325,12 +311,15 @@ class PositionStatusReconciliationProcessorTest {
             Map.of(
                 BizPositiveEventLookup.key(recoveredCandidate),
                 BizPositiveEventLookupResult.found(recoveredEvent)));
+    
+    when(gpdPayClient.executePayRecovery(expiredRecoveredCandidate, expiredRecoveredEvent))
+        .thenReturn(GpdPayRecoveryResult.success());
 
     when(bizPositiveEventLookup.findPositiveEvents(secondChunk))
         .thenReturn(
             Map.of(
-                BizPositiveEventLookup.key(manualRequiredCandidate),
-                BizPositiveEventLookupResult.found(manualRequiredEvent),
+                BizPositiveEventLookup.key(expiredRecoveredCandidate),
+                BizPositiveEventLookupResult.found(expiredRecoveredEvent),
                 BizPositiveEventLookup.key(payFailedCandidate),
                 BizPositiveEventLookupResult.found(payFailedEvent)));
 
@@ -345,12 +334,12 @@ class PositionStatusReconciliationProcessorTest {
     assertThat(counters.scanned()).isEqualTo(4);
     assertThat(counters.positiveEventsFound()).isEqualTo(3);
     assertThat(counters.reconciliationCases()).isEqualTo(3);
-    assertThat(counters.recovered()).isEqualTo(1);
-    assertThat(counters.manualRequired()).isEqualTo(1);
+    assertThat(counters.recovered()).isEqualTo(2);
+    assertThat(counters.manualRequired()).isZero();
     assertThat(counters.technicalFailures()).isEqualTo(1);
-    assertThat(counters.payExecuted()).isEqualTo(1);
+    assertThat(counters.payExecuted()).isEqualTo(2);
     assertThat(counters.payFailed()).isEqualTo(1);
-    assertThat(counters.notRecovered()).isEqualTo(2);
+    assertThat(counters.notRecovered()).isEqualTo(1);
 
     verifyCandidateReaderCalled(run);
     verify(bizPositiveEventLookup).findPositiveEvents(firstChunk);
