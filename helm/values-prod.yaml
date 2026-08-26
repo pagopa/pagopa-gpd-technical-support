@@ -4,7 +4,7 @@ microservice-chart:
   fullnameOverride: ""
   image:
     repository: ghcr.io/pagopa/pagopa-gpd-technical-support
-    tag: "0.0.5"
+    tag: "0.0.5-1-PIDM-2314-operation-timeout"
     pullPolicy: Always
   livenessProbe:
     handlerType: httpGet

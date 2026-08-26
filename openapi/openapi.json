@@ -4,7 +4,7 @@
     "description": "Technical support APIs for GPD",
     "termsOfService": "https://www.pagopa.gov.it/",
     "title": "GPD Technical Support",
-    "version": "0.0.5"
+    "version": "0.0.5-1-PIDM-2314-operation-timeout"
   },
   "servers": [
     {
