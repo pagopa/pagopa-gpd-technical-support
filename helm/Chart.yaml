@@ -2,8 +2,8 @@ apiVersion: v2
 name: pagopa-gpd-technical-support
 description: Microservice exposing technical support APIs for GPD
 type: application
-version: 0.21.0
-appVersion: 0.0.6
+version: 0.22.0
+appVersion: 0.0.6-1-PIDM-2350-invalid-expired-pay
 dependencies:
   - name: microservice-chart
     version: 8.4.1

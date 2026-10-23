@@ -14,7 +14,7 @@
 
   <groupId>it.gov.pagopa.gpd</groupId>
   <artifactId>pagopa-gpd-technical-support</artifactId>
-  <version>0.0.6</version>
+  <version>0.0.6-1-PIDM-2350-invalid-expired-pay</version>
   <name>GPD Technical Support</name>
   <description>Technical support APIs for GPD</description>
 

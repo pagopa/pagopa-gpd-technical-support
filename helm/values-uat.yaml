@@ -4,7 +4,7 @@ microservice-chart:
   fullnameOverride: ""
   image:
     repository: ghcr.io/pagopa/pagopa-gpd-technical-support
-    tag: "0.0.6"
+    tag: "0.0.6-1-PIDM-2350-invalid-expired-pay"
     pullPolicy: Always
   livenessProbe:
     handlerType: httpGet
