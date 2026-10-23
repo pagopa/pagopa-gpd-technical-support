@@ -1,51 +1,286 @@
-# azure-pipelines.yml
 trigger: none
+pr: none
 
 parameters:
-  - name: "ENVIRONMENT"
-    displayName: "Environment"
+  - name: ENVIRONMENT
+    displayName: Environment
     type: string
+    default: uat
     values:
-      - "dev"
-      - "uat"
-    default: "uat"
-  - name: "TEST_TYPE"
-    displayName: "Test type"
+      - dev
+      - uat
+
+  - name: TEST_DAY
+    displayName: Test day (YYYY-MM-DD)
     type: string
-    values:
-      - "load"
-      - "smoke"
-      - "soak"
-      - "spike"
-      - "stress"
-      - "constant"
-      - # TODO: add your values
-    default: "constant"
-  - name: "SCRIPT"
-    displayName: "Script name"
+    default: "2026-01-13"
+
+  - name: POSITIONS_TO_CREATE
+    displayName: Number of debt positions (3-1000000)
+    type: number
+    default: 10000
+
+  - name: EXECUTION_MODE
+    displayName: Execution mode
     type: string
+    default: full
     values:
-      - yourscriptname # TODO: add your script
-variables:
-  ${{ if eq(parameters['ENVIRONMENT'], 'dev') }}:
-    poolImage: 'pagopa-dev-loadtest-linux'
-    API_SUBSCRIPTION_KEY: $(DEV_API_SUBSCRIPTION_KEY)
-  ${{ if eq(parameters['ENVIRONMENT'], 'uat') }}:
-    poolImage: 'pagopa-uat-loadtest-linux'
-    API_SUBSCRIPTION_KEY: $(UAT_API_SUBSCRIPTION_KEY)
+      - full
+      - prepare-only
+      - skip-prepare
 
+  - name: ALLOW_FULL_DAY_PURGE
+    displayName: Allow deletion of unrelated candidates found on TEST_DAY
+    type: boolean
+    default: false
 
-pool:
-  name: $(poolImage)
+jobs:
+  - job: ReconciliationPerformanceTest
+    displayName: >-
+      Reconciliation performance test - ${{ parameters.ENVIRONMENT }}
 
-steps:
-  - script: |
-      cd ./performance-test/src
-      docker pull grafana/k6
-    displayName: Pull k6 image
+    pool:
+      ${{ if eq(parameters.ENVIRONMENT, 'dev') }}:
+        name: pagopa-dev-loadtest-linux
+      ${{ if eq(parameters.ENVIRONMENT, 'uat') }}:
+        name: pagopa-uat-loadtest-linux
 
-    # TODO: add your env params
-  - script: |
-      cd ./performance-test
-      sh ./run_performance_test.sh ${{ parameters.ENVIRONMENT }} ${{ parameters.TEST_TYPE }} ${{ parameters.SCRIPT }} afmcalculatork6 $(API_SUBSCRIPTION_KEY)
-    displayName: Run k6 ${{ parameters.SCRIPT }} on ${{ parameters.ENVIRONMENT }}
+    # Required for large executions. The selected pool must be self-hosted
+    # and its underlying infrastructure must allow the agent to stay alive
+    # for the whole execution.
+    timeoutInMinutes: 2160
+    cancelTimeoutInMinutes: 5
+
+    steps:
+      - checkout: self
+        displayName: Checkout repository
+        clean: false
+        persistCredentials: false
+
+      - bash: |
+          set -Eeuo pipefail
+
+          echo "Agent name: ${AGENT_NAME:-unknown}"
+          echo "Agent machine: ${AGENT_MACHINENAME:-unknown}"
+          echo "Environment: ${ENVIRONMENT}"
+          echo "Test day: ${TEST_DAY}"
+          echo "Positions: ${POSITIONS_TO_CREATE}"
+          echo "Execution mode: ${EXECUTION_MODE}"
+          echo "Allow full-day purge: ${ALLOW_FULL_DAY_PURGE}"
+
+          command -v bash >/dev/null \
+            || {
+              echo "ERROR: bash is not installed."
+              exit 1
+            }
+
+          command -v docker >/dev/null \
+            || {
+              echo "ERROR: Docker CLI is not installed."
+              exit 1
+            }
+
+          docker info >/dev/null \
+            || {
+              echo "ERROR: the agent cannot connect to the Docker daemon."
+              exit 1
+            }
+
+          docker compose version
+
+          [[ "$ENVIRONMENT" =~ ^(dev|uat)$ ]] \
+            || {
+              echo "ERROR: ENVIRONMENT must be dev or uat."
+              exit 1
+            }
+
+          [[ "$TEST_DAY" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] \
+            || {
+              echo "ERROR: TEST_DAY must use YYYY-MM-DD format."
+              exit 1
+            }
+
+          normalized_test_day="$(
+            date -d "$TEST_DAY" +%F 2>/dev/null
+          )" || {
+            echo "ERROR: TEST_DAY is not a valid calendar date."
+            exit 1
+          }
+
+          [[ "$normalized_test_day" == "$TEST_DAY" ]] \
+            || {
+              echo "ERROR: TEST_DAY is not a valid calendar date."
+              exit 1
+            }
+
+          [[ "$POSITIONS_TO_CREATE" =~ ^[1-9][0-9]*$ ]] \
+            || {
+              echo "ERROR: POSITIONS_TO_CREATE must be a positive integer."
+              exit 1
+            }
+
+          (( POSITIONS_TO_CREATE >= 3 )) \
+            || {
+              echo "ERROR: POSITIONS_TO_CREATE must be at least 3."
+              exit 1
+            }
+
+          (( POSITIONS_TO_CREATE <= 1000000 )) \
+            || {
+              echo "ERROR: POSITIONS_TO_CREATE cannot exceed 1000000."
+              exit 1
+            }
+
+          case "$EXECUTION_MODE" in
+            full|prepare-only|skip-prepare)
+              ;;
+            *)
+              echo "ERROR: unsupported execution mode: $EXECUTION_MODE"
+              exit 1
+              ;;
+          esac
+
+          allow_full_day_purge="$(
+            printf '%s' "$ALLOW_FULL_DAY_PURGE" |
+              tr '[:upper:]' '[:lower:]'
+          )"
+
+          [[
+            "$allow_full_day_purge" == "true" ||
+            "$allow_full_day_purge" == "false"
+          ]] || {
+            echo "ERROR: ALLOW_FULL_DAY_PURGE must be true or false."
+            exit 1
+          }
+
+          if [[
+            "$EXECUTION_MODE" == "skip-prepare" &&
+            "$allow_full_day_purge" == "true"
+          ]]; then
+            echo "ERROR: ALLOW_FULL_DAY_PURGE cannot be used with skip-prepare."
+            exit 1
+          fi
+
+          required_secrets=(APD_PASSWORD)
+
+          if [[ "$EXECUTION_MODE" != "prepare-only" ]]; then
+            required_secrets+=(API_SUBSCRIPTION_KEY RECONCILIATION_COSMOS_KEY)
+          fi
+
+          if [[ "$EXECUTION_MODE" != "skip-prepare" ]]; then
+            required_secrets+=(BIZ_COSMOS_KEY)
+          fi
+
+          unresolved_macro_pattern='^\$\([^)]+\)$'
+
+          for secret_name in "${required_secrets[@]}"; do
+            secret_value="${!secret_name:-}"
+
+            if [[ -z "$secret_value" || "$secret_value" =~ $unresolved_macro_pattern ]]; then
+              echo "ERROR: required secret variable $secret_name is missing or unresolved."
+              exit 1
+            fi
+          done
+
+          echo "Agent and input validation completed successfully."
+        displayName: Validate agent, inputs and secrets
+        env:
+          ENVIRONMENT: ${{ parameters.ENVIRONMENT }}
+          TEST_DAY: ${{ parameters.TEST_DAY }}
+          POSITIONS_TO_CREATE: ${{ parameters.POSITIONS_TO_CREATE }}
+          EXECUTION_MODE: ${{ parameters.EXECUTION_MODE }}
+          ALLOW_FULL_DAY_PURGE: ${{ parameters.ALLOW_FULL_DAY_PURGE }}
+
+          ${{ if eq(parameters.ENVIRONMENT, 'dev') }}:
+            API_SUBSCRIPTION_KEY: $(DEV_API_SUBSCRIPTION_KEY)
+            APD_PASSWORD: $(DEV_APD_PASSWORD)
+            BIZ_COSMOS_KEY: $(DEV_BIZ_COSMOS_KEY)
+            RECONCILIATION_COSMOS_KEY: $(DEV_RECONCILIATION_COSMOS_KEY)
+
+          ${{ if eq(parameters.ENVIRONMENT, 'uat') }}:
+            API_SUBSCRIPTION_KEY: $(UAT_API_SUBSCRIPTION_KEY)
+            APD_PASSWORD: $(UAT_APD_PASSWORD)
+            BIZ_COSMOS_KEY: $(UAT_BIZ_COSMOS_KEY)
+            RECONCILIATION_COSMOS_KEY: $(UAT_RECONCILIATION_COSMOS_KEY)
+
+      - bash: |
+          set -Eeuo pipefail
+
+          find performance-test \
+            -type f \
+            -name '*.sh' \
+            -exec sed -i 's/\r$//' {} +
+
+          chmod +x \
+            performance-test/run_performance_test.sh \
+            performance-test/run_local_apd_safety_test.sh \
+            performance-test/src/data-preparation/apd/prepare-test-day.sh \
+            performance-test/src/data-validation/apd/validate-reconciliation-result.sh
+        displayName: Normalize script line endings and permissions
+
+      - bash: |
+          set -Eeuo pipefail
+
+          cd performance-test
+
+          allow_full_day_purge="$(
+            printf '%s' "$ALLOW_FULL_DAY_PURGE" |
+              tr '[:upper:]' '[:lower:]'
+          )"
+
+          arguments=(
+            "ENVIRONMENT=${ENVIRONMENT}"
+            "TEST_DAY=${TEST_DAY}"
+            "POSITIONS_TO_CREATE=${POSITIONS_TO_CREATE}"
+          )
+
+          case "$EXECUTION_MODE" in
+            full)
+              ;;
+            prepare-only)
+              arguments+=("--prepare-only")
+              ;;
+            skip-prepare)
+              arguments+=("--skip-prepare")
+              ;;
+          esac
+
+          if [[ "$allow_full_day_purge" == "true" ]]; then
+            echo "##vso[task.logissue type=warning]Full-day purge was explicitly enabled for ENVIRONMENT=${ENVIRONMENT}, TEST_DAY=${TEST_DAY}. Unrelated APD candidate graphs found on that day may be deleted."
+            arguments+=("--allow-full-day-purge")
+          fi
+
+          echo "Starting reconciliation performance test..."
+          ./run_performance_test.sh "${arguments[@]}"
+        displayName: >-
+          Run performance test on ${{ parameters.ENVIRONMENT }}
+        env:
+          ENVIRONMENT: ${{ parameters.ENVIRONMENT }}
+          TEST_DAY: ${{ parameters.TEST_DAY }}
+          POSITIONS_TO_CREATE: ${{ parameters.POSITIONS_TO_CREATE }}
+          EXECUTION_MODE: ${{ parameters.EXECUTION_MODE }}
+          ALLOW_FULL_DAY_PURGE: ${{ parameters.ALLOW_FULL_DAY_PURGE }}
+
+          ${{ if eq(parameters.ENVIRONMENT, 'dev') }}:
+            API_SUBSCRIPTION_KEY: $(DEV_API_SUBSCRIPTION_KEY)
+            APD_PASSWORD: $(DEV_APD_PASSWORD)
+            BIZ_COSMOS_KEY: $(DEV_BIZ_COSMOS_KEY)
+            RECONCILIATION_COSMOS_KEY: $(DEV_RECONCILIATION_COSMOS_KEY)
+
+          ${{ if eq(parameters.ENVIRONMENT, 'uat') }}:
+            API_SUBSCRIPTION_KEY: $(UAT_API_SUBSCRIPTION_KEY)
+            APD_PASSWORD: $(UAT_APD_PASSWORD)
+            BIZ_COSMOS_KEY: $(UAT_BIZ_COSMOS_KEY)
+            RECONCILIATION_COSMOS_KEY: $(UAT_RECONCILIATION_COSMOS_KEY)
+
+      - bash: |
+          set +e
+
+          if command -v docker >/dev/null && docker info >/dev/null 2>&1; then
+            cd performance-test || exit 1
+            stack_name="$(cd .. && basename "$PWD")-k6"
+            docker compose -p "$stack_name" down --remove-orphans
+            docker system df
+          fi
+        displayName: Clean Docker resources
+        condition: always()

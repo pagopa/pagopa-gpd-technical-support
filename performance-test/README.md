@@ -89,11 +89,32 @@ For `dev` and `uat`, the Biz+ preparation step creates one matching `DONE` event
 1.0
 ```
 
-Expected reconciliation results:
+Expected reconciliation results for the generated dataset:
 
-- `VALID` positions are recovered through PAY and become `PAID / PO_PAID`;
-- `EXPIRED` positions remain `EXPIRED / PO_UNPAID` and are reported as `MANUAL_REQUIRED`;
-- `INVALID` positions remain `INVALID / PO_UNPAID` and are reported as `MANUAL_REQUIRED`.
+| Initial position status | Final APD position / option status | Report status | Outcome |
+|---|---|---|---|
+| `VALID` | `PAID / PO_PAID` | `RECOVERED` | `POSITIVE_EVENT_FOUND_PAY_EXECUTED` |
+| `EXPIRED` | `PAID / PO_PAID` | `RECOVERED` | `POSITIVE_EVENT_FOUND_EXPIRED_PAY_EXECUTED` |
+| `INVALID` | `PAID / PO_PAID` | `RECOVERED` | `POSITIVE_EVENT_FOUND_INVALID_PAY_EXECUTED` |
+
+Every generated position has one payment option and one matching positive
+Biz+ event. Therefore, for `N = POSITIONS_TO_CREATE`, the expected counters are:
+
+- `scanned = N`;
+- `positiveEventsFound = N`;
+- `reconciliationCases = N`;
+- `recovered = N`;
+- `payExecuted = N`;
+- `manualRequired = 0`;
+- `notRecovered = 0`;
+- `technicalFailures = 0`;
+- `payFailed = 0`.
+
+Report fields `ppStatus` and `poStatus` preserve the APD values read when
+the candidate was selected. They describe the initial state, while
+`reconciliationStatus`, `outcome` and PAY flags describe the recovery result.
+
+Final APD states are checked separately by the APD validator.
 
 ## Prerequisites
 
