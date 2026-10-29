@@ -64,8 +64,8 @@ microservice-chart:
     cooldownPeriod: 50 # seconds
     triggers:
       - type: cpu
+        metricType: Utilization
         metadata:
-          type: Utilization
           value: "75"
   envConfig:
     APP_NAME: "pagopa-gpd-technical-support"
