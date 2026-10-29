@@ -2,8 +2,8 @@ apiVersion: v2
 name: pagopa-gpd-technical-support
 description: Microservice exposing technical support APIs for GPD
 type: application
-version: 0.23.0
-appVersion: 0.0.7
+version: 0.24.0
+appVersion: 0.0.8
 dependencies:
   - name: microservice-chart
     version: 8.4.1
