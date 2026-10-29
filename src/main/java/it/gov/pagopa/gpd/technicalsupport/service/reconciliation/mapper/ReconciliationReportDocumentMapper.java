@@ -44,7 +44,7 @@ public class ReconciliationReportDocumentMapper {
         .ppStatus(candidate.ppStatus())
         .poStatus(candidate.poStatus())
         .reconciliationStatus(ReconciliationStatus.RECOVERED)
-        .outcome(ReconciliationOutcome.POSITIVE_EVENT_FOUND_PAY_EXECUTED)
+        .outcome(recoveredOutcome(candidate))
         .payInvoked(true)
         .paySucceeded(true)
         .errorCode(null)
@@ -171,5 +171,13 @@ public class ReconciliationReportDocumentMapper {
 
   private String toIsoString(OffsetDateTime dateTime) {
     return dateTime == null ? null : dateTime.toString();
+  }
+  
+  private static ReconciliationOutcome recoveredOutcome(ReconciliationCandidate candidate) {
+    return switch (candidate.ppStatus()) {
+    case INVALID -> ReconciliationOutcome.POSITIVE_EVENT_FOUND_INVALID_PAY_EXECUTED;
+    case EXPIRED -> ReconciliationOutcome.POSITIVE_EVENT_FOUND_EXPIRED_PAY_EXECUTED;
+    default -> ReconciliationOutcome.POSITIVE_EVENT_FOUND_PAY_EXECUTED;
+    };
   }
 }

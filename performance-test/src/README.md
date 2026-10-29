@@ -431,6 +431,16 @@ The validator:
 
 During `RUNNING`, counters can remain at zero because they are persisted only at the end of the reconciliation.
 
+For the generated single-option dataset, all positions initially in
+`VALID`, `EXPIRED` or `INVALID` are expected to be recovered successfully.
+
+The Cosmos DB validator requires `recovered` and `payExecuted` to equal
+the prepared position count, with no manual cases or failures.
+Successful reports use an outcome specific to the initial position status.
+
+The APD validator requires every generated position to be `PAID` and
+every generated payment option to be `PO_PAID`.
+
 ### APD final state
 
 ```text

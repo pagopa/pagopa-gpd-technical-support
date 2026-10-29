@@ -85,7 +85,9 @@ function expectedDistribution(total) {
     valid: total - expired - invalid,
     expired,
     invalid,
-    manualRequired: expired + invalid,
+    recovered: total,
+    notRecovered: 0,
+    manualRequired: 0,
   };
 }
 
@@ -609,13 +611,13 @@ function validateRunCounters(
 
   assertEqual(
     numberField(run, "recovered"),
-    expected.valid,
+    expected.recovered,
     "run.recovered",
   );
 
   assertEqual(
     numberField(run, "notRecovered"),
-    expected.manualRequired,
+    expected.notRecovered,
     "run.notRecovered",
   );
 
@@ -636,7 +638,7 @@ function validateRunCounters(
 
   assertEqual(
     numberField(run, "payExecuted"),
-    expected.valid,
+    expected.recovered,
     "run.payExecuted",
   );
 
@@ -653,7 +655,7 @@ function validateReportStatuses(
 ) {
   assertEqual(
     groupValue(counts, "RECOVERED"),
-    expected.valid,
+    expected.recovered,
     "RECOVERED reports",
   );
 
@@ -692,19 +694,19 @@ function validateOutcomes(
   assertEqual(
     groupValue(
       counts,
-      "POSITIVE_EVENT_FOUND_EXPIRED_MANUAL_REQUIRED",
+      "POSITIVE_EVENT_FOUND_EXPIRED_PAY_EXECUTED",
     ),
     expected.expired,
-    "EXPIRED manual outcomes",
+    "EXPIRED recovered outcomes",
   );
 
   assertEqual(
     groupValue(
       counts,
-      "POSITIVE_EVENT_FOUND_INVALID_MANUAL_REQUIRED",
+      "POSITIVE_EVENT_FOUND_INVALID_PAY_EXECUTED",
     ),
     expected.invalid,
-    "INVALID manual outcomes",
+    "INVALID recovered outcomes",
   );
 }
 
@@ -736,7 +738,7 @@ function validatePayFlags(
 
   assertEqual(
     successfulPay,
-    expected.valid,
+    expected.recovered,
     "reports with successful PAY",
   );
 
@@ -912,7 +914,7 @@ async function main() {
     `POSITIONS=${positions}`,
   );
   console.log(
-    `EXPECTED_RECOVERED=${expected.valid}`,
+    `EXPECTED_RECOVERED=${expected.recovered}`,
   );
   console.log(
     `EXPECTED_MANUAL_REQUIRED=${expected.manualRequired}`,
@@ -989,7 +991,7 @@ async function main() {
     reportsContainer,
     expectedExecutionId,
   );
-  
+
   const technicalFailures =
     await technicalFailureSample(
       reportsContainer,
@@ -1053,7 +1055,7 @@ async function main() {
     executionId: expectedExecutionId,
     status: run.status,
     positions,
-    recovered: expected.valid,
+    recovered: expected.recovered,
     manualRequired:
       expected.manualRequired,
     technicalFailures: 0,
@@ -1078,7 +1080,7 @@ async function main() {
     `  STATUS=${run.status}`,
   );
   console.log(
-    `  RECOVERED=${expected.valid}`,
+    `  RECOVERED=${expected.recovered}`,
   );
   console.log(
     `  MANUAL_REQUIRED=${expected.manualRequired}`,

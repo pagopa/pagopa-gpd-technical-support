@@ -1,8 +1,6 @@
 package it.gov.pagopa.gpd.technicalsupport.service.reconciliation;
 
 import it.gov.pagopa.gpd.technicalsupport.config.reconciliation.ReconciliationProperties;
-import it.gov.pagopa.gpd.technicalsupport.model.gpd.DebtPositionStatus;
-import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.ReconciliationOutcome;
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.ReconciliationRunCreationResult;
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.apd.ReconciliationCandidate;
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.biz.BizPositiveEventLookupResult;
@@ -103,61 +101,23 @@ public class PositionStatusReconciliationProcessor {
 			  System.currentTimeMillis() - startTime);
   }
 
-  private ReconciliationCandidateProcessingResult processCandidate(
-		  ReconciliationRunCreationResult run,
-		  ReconciliationCandidate candidate,
-		  BizPositiveEventLookupResult lookupResult) {
+  private ReconciliationCandidateProcessingResult processCandidate(ReconciliationRunCreationResult run,
+      ReconciliationCandidate candidate, BizPositiveEventLookupResult lookupResult) {
 
-	  if (lookupResult.status() == BizPositiveEventLookupStatus.NOT_FOUND) {
-		  return ReconciliationCandidateProcessingResult.forNotFound();
-	  }
+    if (lookupResult.status() == BizPositiveEventLookupStatus.NOT_FOUND) {
+      return ReconciliationCandidateProcessingResult.forNotFound();
+    }
 
-	  if (lookupResult.status() == BizPositiveEventLookupStatus.FAILED) {
-		  ReconciliationReportDocument report =
-				  reportMapper.technicalFailureReport(
-						  run.executionId(),
-						  run.logicalRunKey(),
-						  candidate,
-						  lookupResult.errorCode(),
-						  lookupResult.errorMessage(),
-						  nowUtc());
+    if (lookupResult.status() == BizPositiveEventLookupStatus.FAILED) {
+      ReconciliationReportDocument report = reportMapper.technicalFailureReport(run.executionId(), run.logicalRunKey(),
+          candidate, lookupResult.errorCode(), lookupResult.errorMessage(), nowUtc());
 
-		  reportStore.save(report);
+      reportStore.save(report);
 
-		  return ReconciliationCandidateProcessingResult.forTechnicalFailure();
-	  }
+      return ReconciliationCandidateProcessingResult.forTechnicalFailure();
+    }
 
-	  if (candidate.ppStatus() == DebtPositionStatus.EXPIRED) {
-		  ReconciliationReportDocument report =
-				  reportMapper.manualRequiredReport(
-						  run.executionId(),
-						  run.logicalRunKey(),
-						  candidate,
-						  lookupResult.event(),
-						  ReconciliationOutcome.POSITIVE_EVENT_FOUND_EXPIRED_MANUAL_REQUIRED,
-						  nowUtc());
-
-		  reportStore.save(report);
-
-		  return ReconciliationCandidateProcessingResult.forManualRequired();
-	  }
-
-	  if (candidate.ppStatus() == DebtPositionStatus.INVALID) {
-		  ReconciliationReportDocument report =
-				  reportMapper.manualRequiredReport(
-						  run.executionId(),
-						  run.logicalRunKey(),
-						  candidate,
-						  lookupResult.event(),
-						  ReconciliationOutcome.POSITIVE_EVENT_FOUND_INVALID_MANUAL_REQUIRED,
-						  nowUtc());
-
-		  reportStore.save(report);
-
-		  return ReconciliationCandidateProcessingResult.forManualRequired();
-	  }
-
-	  return executePayRecovery(run, candidate, lookupResult);
+    return executePayRecovery(run, candidate, lookupResult);
   }
 
   private ReconciliationCandidateProcessingResult executePayRecovery(
@@ -251,10 +211,6 @@ public class PositionStatusReconciliationProcessor {
 
     static ReconciliationCandidateProcessingResult forTechnicalFailure() {
       return fromFlags(false, false, false, true, false, false);
-    }
-
-    static ReconciliationCandidateProcessingResult forManualRequired() {
-      return fromFlags(true, false, true, false, false, false);
     }
 
     static ReconciliationCandidateProcessingResult forPayFailed() {

@@ -26,7 +26,7 @@ expected AS (
     expected_positions
       - expected_expired
       - expected_invalid
-      AS expected_paid
+      AS expected_valid
   FROM parameters
 ),
 owned_positions AS (
@@ -59,7 +59,7 @@ owned_graph AS (
 )
 SELECT
   e.expected_positions,
-  e.expected_paid,
+  e.expected_valid,
   e.expected_expired,
   e.expected_invalid,
 
@@ -69,65 +69,53 @@ SELECT
   count(g.payment_option_id)
     AS payment_options,
 
+  -- Positions initially VALID.
   count(*) FILTER (
-    WHERE g.ordinal <= e.expected_paid
+    WHERE g.ordinal <= e.expected_valid
       AND g.payment_position_status = 'PAID'
-  ) AS paid_positions,
+  ) AS valid_paid_positions,
 
   count(*) FILTER (
-    WHERE g.ordinal <= e.expected_paid
+    WHERE g.ordinal <= e.expected_valid
       AND g.payment_option_status = 'PO_PAID'
-  ) AS paid_options,
+  ) AS valid_paid_options,
+
+  -- Positions initially EXPIRED.
+  count(*) FILTER (
+    WHERE g.ordinal > e.expected_valid
+      AND g.ordinal
+        <= e.expected_valid + e.expected_expired
+      AND g.payment_position_status = 'PAID'
+  ) AS expired_paid_positions,
 
   count(*) FILTER (
-    WHERE g.ordinal > e.expected_paid
+    WHERE g.ordinal > e.expected_valid
       AND g.ordinal
-        <= e.expected_paid + e.expected_expired
-      AND g.payment_position_status = 'EXPIRED'
-  ) AS expired_positions,
+        <= e.expected_valid + e.expected_expired
+      AND g.payment_option_status = 'PO_PAID'
+  ) AS expired_paid_options,
 
+  -- Positions initially INVALID.
   count(*) FILTER (
-    WHERE g.ordinal > e.expected_paid
-      AND g.ordinal
-        <= e.expected_paid + e.expected_expired
-      AND g.payment_option_status = 'PO_UNPAID'
-  ) AS expired_unpaid_options,
+    WHERE g.ordinal
+        > e.expected_valid + e.expected_expired
+      AND g.payment_position_status = 'PAID'
+  ) AS invalid_paid_positions,
 
   count(*) FILTER (
     WHERE g.ordinal
-        > e.expected_paid + e.expected_expired
-      AND g.payment_position_status = 'INVALID'
-  ) AS invalid_positions,
+        > e.expected_valid + e.expected_expired
+      AND g.payment_option_status = 'PO_PAID'
+  ) AS invalid_paid_options,
 
   count(*) FILTER (
-    WHERE g.ordinal
-        > e.expected_paid + e.expected_expired
-      AND g.payment_option_status = 'PO_UNPAID'
-  ) AS invalid_unpaid_options,
-
-  count(*) FILTER (
-    WHERE NOT (
-      (
-        g.ordinal <= e.expected_paid
-        AND g.payment_position_status = 'PAID'
-        AND g.payment_option_status = 'PO_PAID'
+    WHERE g.payment_position_id IS NOT NULL
+      AND (
+        g.payment_position_status
+          IS DISTINCT FROM 'PAID'
+        OR g.payment_option_status
+          IS DISTINCT FROM 'PO_PAID'
       )
-      OR
-      (
-        g.ordinal > e.expected_paid
-        AND g.ordinal
-          <= e.expected_paid + e.expected_expired
-        AND g.payment_position_status = 'EXPIRED'
-        AND g.payment_option_status = 'PO_UNPAID'
-      )
-      OR
-      (
-        g.ordinal
-          > e.expected_paid + e.expected_expired
-        AND g.payment_position_status = 'INVALID'
-        AND g.payment_option_status = 'PO_UNPAID'
-      )
-    )
   ) AS unexpected_states
 
 FROM expected e
@@ -135,7 +123,7 @@ LEFT JOIN owned_graph g
   ON true
 GROUP BY
   e.expected_positions,
-  e.expected_paid,
+  e.expected_valid,
   e.expected_expired,
   e.expected_invalid;
 
@@ -144,12 +132,12 @@ TABLE gpdts_result_validation;
 SELECT (
   expected_positions = payment_positions
   AND expected_positions = payment_options
-  AND expected_paid = paid_positions
-  AND expected_paid = paid_options
-  AND expected_expired = expired_positions
-  AND expected_expired = expired_unpaid_options
-  AND expected_invalid = invalid_positions
-  AND expected_invalid = invalid_unpaid_options
+  AND expected_valid = valid_paid_positions
+  AND expected_valid = valid_paid_options
+  AND expected_expired = expired_paid_positions
+  AND expected_expired = expired_paid_options
+  AND expected_invalid = invalid_paid_positions
+  AND expected_invalid = invalid_paid_options
   AND unexpected_states = 0
 ) AS validation_passed
 FROM gpdts_result_validation

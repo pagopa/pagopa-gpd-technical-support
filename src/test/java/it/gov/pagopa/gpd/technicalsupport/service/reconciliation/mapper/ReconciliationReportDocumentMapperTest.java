@@ -18,6 +18,8 @@ import java.time.Month;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class ReconciliationReportDocumentMapperTest {
 
@@ -154,6 +156,33 @@ class ReconciliationReportDocumentMapperTest {
     assertThat(report.errorMessage()).isEqualTo("PAY recovery failed");
     assertThat(report.createdAt()).isEqualTo(now.toString());
     assertThat(report.updatedAt()).isEqualTo(now.toString());
+  }
+  
+  @ParameterizedTest
+  @CsvSource({ "VALID, POSITIVE_EVENT_FOUND_PAY_EXECUTED", "PARTIALLY_PAID, POSITIVE_EVENT_FOUND_PAY_EXECUTED",
+      "INVALID, POSITIVE_EVENT_FOUND_INVALID_PAY_EXECUTED", "EXPIRED, POSITIVE_EVENT_FOUND_EXPIRED_PAY_EXECUTED" })
+  void recoveredReport_shouldChooseOutcomeFromOriginalPositionStatus(DebtPositionStatus initialStatus,
+      ReconciliationOutcome expectedOutcome) {
+
+    OffsetDateTime now = OffsetDateTime.of(2026, 5, 26, 10, 0, 0, 0, ZoneOffset.UTC);
+
+    ReconciliationCandidate candidate = candidate(initialStatus);
+    BizPositiveEvent event = bizPositiveEvent(candidate);
+
+    ReconciliationReportDocument report = mapper.recoveredReport("execution-id", "logical-run-key", candidate, event,
+        now);
+
+    assertThat(report.reconciliationStatus()).isEqualTo(ReconciliationStatus.RECOVERED);
+    assertThat(report.outcome()).isEqualTo(expectedOutcome);
+
+    assertThat(report.ppStatus()).isEqualTo(initialStatus);
+    assertThat(report.poStatus()).isEqualTo(PaymentOptionStatus.PO_UNPAID);
+    assertThat(report.bizId()).isEqualTo(event.eventId());
+
+    assertThat(report.payInvoked()).isTrue();
+    assertThat(report.paySucceeded()).isTrue();
+    assertThat(report.errorCode()).isNull();
+    assertThat(report.errorMessage()).isNull();
   }
 
   private ReconciliationCandidate candidate() {
