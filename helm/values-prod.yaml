@@ -4,7 +4,7 @@ microservice-chart:
   fullnameOverride: ""
   image:
     repository: ghcr.io/pagopa/pagopa-gpd-technical-support
-    tag: "0.0.8"
+    tag: "0.0.8-1-PIDM-2620"
     pullPolicy: Always
   livenessProbe:
     handlerType: httpGet
@@ -68,6 +68,7 @@ microservice-chart:
         metadata:
           value: "75"
   envConfig:
+    JAVA_OPTS: "-XX:-UseBASE64Intrinsics"
     APP_NAME: "pagopa-gpd-technical-support"
     APP_ENVIRONMENT: "prod"
     WEBSITE_SITE_NAME: "pagopa-gpd-technical-support"
@@ -134,5 +135,5 @@ microservice-chart:
       repository: ghcr.io/pagopa/pagopa-gpd-technical-support
       tag: "0.1.0"
       pullPolicy: Always
-    envConfig: {}
+    envConfig: {JAVA_OPTS: "-XX:-UseBASE64Intrinsics"}
     envSecret: {}
