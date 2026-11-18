@@ -68,7 +68,7 @@ microservice-chart:
         metadata:
           value: "75"
   envConfig:
-    JAVA_TOOL_OPTIONS: "-XX:-UseBASE64Intrinsics"
+    JAVA_OPTS: "-XX:-UseBASE64Intrinsics"
     APP_NAME: "pagopa-gpd-technical-support"
     APP_ENVIRONMENT: "dev"
     WEBSITE_SITE_NAME: "pagopa-gpd-technical-support"
@@ -134,5 +134,5 @@ microservice-chart:
       repository: ghcr.io/pagopa/pagopa-gpd-technical-support
       tag: "0.1.0"
       pullPolicy: Always
-    envConfig: {}
+    envConfig: {JAVA_OPTS: "-XX:-UseBASE64Intrinsics"}
     envSecret: {}
