@@ -68,6 +68,7 @@ microservice-chart:
         metadata:
           value: "75"
   envConfig:
+    JAVA_TOOL_OPTIONS: "-XX:-UseBASE64Intrinsics -XX:UseAVX=2"
     APP_NAME: "pagopa-gpd-technical-support"
     APP_ENVIRONMENT: "uat"
     WEBSITE_SITE_NAME: "pagopa-gpd-technical-support"
