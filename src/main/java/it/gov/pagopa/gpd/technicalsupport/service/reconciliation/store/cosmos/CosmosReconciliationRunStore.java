@@ -1,7 +1,9 @@
 package it.gov.pagopa.gpd.technicalsupport.service.reconciliation.store.cosmos;
 
 import com.azure.cosmos.CosmosContainer;
+import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.models.CosmosItemRequestOptions;
+import com.azure.cosmos.models.CosmosItemResponse;
 import com.azure.cosmos.models.PartitionKey;
 import it.gov.pagopa.gpd.technicalsupport.model.gpd.ServiceType;
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.ReconciliationRunCreationResult;
@@ -57,9 +59,15 @@ public class CosmosReconciliationRunStore implements ReconciliationRunStore {
     String logicalRunKey = keyBuilder.logicalRunKey(day, serviceTypes);
     PartitionKey partitionKey = new PartitionKey(day.toString());
 
-    ReconciliationRunDocument existingRun = readRunIfExists(logicalRunKey, partitionKey);
+    CosmosItemResponse<ReconciliationRunDocument> existingResponse =
+        readRunResponseIfExists(logicalRunKey, partitionKey);
+    ReconciliationRunDocument existingRun =
+        existingResponse == null ? null : existingResponse.getItem();
 
-    if (existingRun != null && existingRun.status() == ReconciliationRunStatus.RUNNING && !force) {
+    // An active owner must never be replaced.
+    if (existingRun != null
+        && (existingRun.status() == ReconciliationRunStatus.CREATED
+            || existingRun.status() == ReconciliationRunStatus.RUNNING)) {
       return toCreationResult(existingRun, false);
     }
 
@@ -81,13 +89,33 @@ public class CosmosReconciliationRunStore implements ReconciliationRunStore {
         mapper.newCreatedRun(day, serviceTypes, executionId, now);
     
     log.info(
-    	    "Upserting reconciliation run document on Cosmos. id={}, partitionKey={}, executionId={}, status={}",
+        "Acquiring reconciliation run document on Cosmos. id={}, partitionKey={}, executionId={}, status={}",
     	    document.id(),
     	    day,
     	    document.executionId(),
     	    document.status());
 
-    runsContainer.upsertItem(document, partitionKey, new CosmosItemRequestOptions());
+    try {
+      if (existingResponse == null) {
+        // Cosmos arbitrates concurrent first submissions for the same id and partition.
+        runsContainer.createItem(document, partitionKey, new CosmosItemRequestOptions());
+      } else {
+        // Restart a terminal run only if nobody has changed it since our read.
+        runsContainer.replaceItem(
+            document, logicalRunKey, partitionKey,
+            new CosmosItemRequestOptions().setIfMatchETag(existingResponse.getETag()));
+      }
+    } catch (CosmosException e) {
+      if (e.getStatusCode() != 409 && e.getStatusCode() != 412) {
+        throw e;
+      }
+      ReconciliationRunDocument winner = readRunIfExists(logicalRunKey, partitionKey);
+      if (winner == null) {
+        throw e;
+      }
+      // The losing caller must not dispatch another worker, regardless of winner status.
+      return toCreationResult(winner, false);
+    }
 
     return toCreationResult(document, true);
   }
@@ -164,10 +192,16 @@ public class CosmosReconciliationRunStore implements ReconciliationRunStore {
 
   private ReconciliationRunDocument readRunIfExists(
       String logicalRunKey, PartitionKey partitionKey) {
+    CosmosItemResponse<ReconciliationRunDocument> response =
+        readRunResponseIfExists(logicalRunKey, partitionKey);
+    return response == null ? null : response.getItem();
+  }
+
+  private CosmosItemResponse<ReconciliationRunDocument> readRunResponseIfExists(
+      String logicalRunKey, PartitionKey partitionKey) {
     try {
       return runsContainer
-          .readItem(logicalRunKey, partitionKey, ReconciliationRunDocument.class)
-          .getItem();
+          .readItem(logicalRunKey, partitionKey, ReconciliationRunDocument.class);
     } catch (Exception e) {
       if (isNotFound(e)) {
         return null;
