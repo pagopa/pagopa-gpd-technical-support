@@ -40,15 +40,30 @@ jobs:
       - name: Build the Docker image
         run: docker build . --file ${{ env.DOCKERFILE }} --tag localbuild/testimage:latest
 
-      - name: Run the Anchore scan action itself with GitHub Advanced Security code scanning integration enabled
-        uses: anchore/scan-action@3343887d815d7b07465f6fdcd395bd66508d486a # v3
+      - name: Scan the Docker image with Anchore
+        id: scan
+        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
         with:
           image: "localbuild/testimage:latest"
-          acs-report-enable: true
+          output-format: sarif
           fail-build: false
           severity-cutoff: "high"
+
+      - name: Validate Anchore SARIF report
+        id: validate_sarif
+        if: ${{ !cancelled() && steps.scan.outcome == 'success' }}
+        env:
+          SARIF_FILE: ${{ steps.scan.outputs.sarif }}
+        shell: bash
+        run: |
+          if [[ -z "$SARIF_FILE" || ! -s "$SARIF_FILE" ]]; then
+            echo "::error::Anchore did not produce a non-empty SARIF report"
+            exit 1
+          fi
+          jq -e 'type == "object" and .version == "2.1.0" and (.runs | type == "array")' "$SARIF_FILE" >/dev/null
+
       - name: Upload Anchore Scan Report
         uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
-        if: always()
+        if: ${{ !cancelled() && steps.validate_sarif.outcome == 'success' }}
         with:
-          sarif_file: results.sarif
+          sarif_file: ${{ steps.scan.outputs.sarif }}

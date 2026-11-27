@@ -2,6 +2,7 @@ package it.gov.pagopa.gpd.technicalsupport.config.reconciliation.cosmos;
 
 import static it.gov.pagopa.gpd.technicalsupport.config.reconciliation.cosmos.CosmosBeanNames.RECONCILIATION_REPORTS_CONTAINER;
 import static it.gov.pagopa.gpd.technicalsupport.config.reconciliation.cosmos.CosmosBeanNames.RECONCILIATION_RUNS_CONTAINER;
+import static it.gov.pagopa.gpd.technicalsupport.config.reconciliation.cosmos.CosmosBeanNames.RECONCILIATION_RANGE_RUNS_CONTAINER;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -62,5 +63,11 @@ public class ReconciliationCosmosConfig {
   CosmosContainer reconciliationReportsContainer(
       @Qualifier(RECONCILIATION_COSMOS_DATABASE) CosmosDatabase reconciliationCosmosDatabase) {
     return reconciliationCosmosDatabase.getContainer(properties.getReportsContainerName());
+  }
+
+  @Bean(RECONCILIATION_RANGE_RUNS_CONTAINER)
+  CosmosContainer reconciliationRangeRunsContainer(
+      @Qualifier(RECONCILIATION_COSMOS_DATABASE) CosmosDatabase database) {
+    return database.getContainer(properties.getRangeRunsContainerName());
   }
 }

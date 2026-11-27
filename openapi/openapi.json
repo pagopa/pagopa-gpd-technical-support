@@ -4,7 +4,7 @@
     "description": "Technical support APIs for GPD",
     "termsOfService": "https://www.pagopa.gov.it/",
     "title": "GPD Technical Support",
-    "version": "0.0.9"
+    "version": "0.0.9-2-PIDM-2546-reconciliation-range"
   },
   "servers": [
     {

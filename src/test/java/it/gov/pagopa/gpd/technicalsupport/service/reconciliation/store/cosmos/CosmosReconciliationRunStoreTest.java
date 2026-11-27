@@ -1,6 +1,8 @@
 package it.gov.pagopa.gpd.technicalsupport.service.reconciliation.store.cosmos;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.never;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -27,6 +29,9 @@ import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 
 class CosmosReconciliationRunStoreTest {
@@ -69,7 +74,7 @@ class CosmosReconciliationRunStoreTest {
     assertThat(result.shouldStart()).isTrue();
 
     verify(runsContainer)
-        .upsertItem(
+        .createItem(
             any(ReconciliationRunDocument.class),
             any(PartitionKey.class),
             any(CosmosItemRequestOptions.class));
@@ -154,4 +159,112 @@ class CosmosReconciliationRunStoreTest {
             any(PartitionKey.class),
             any(CosmosItemRequestOptions.class));
   }
+  @ParameterizedTest
+  @CsvSource({"CREATED,false", "CREATED,true", "RUNNING,false", "RUNNING,true"})
+  void activeRun_shouldNeverStartAnotherWorker(ReconciliationRunStatus status, boolean force) {
+    ReconciliationRunDocument existing = document(status);
+    CosmosItemResponse<ReconciliationRunDocument> existingResponse = response(existing);
+    when(runsContainer.readItem(eq("2026-05-20__GPD"), any(PartitionKey.class),
+        eq(ReconciliationRunDocument.class))).thenReturn(existingResponse);
+
+    ReconciliationRunCreationResult result =
+        store.createOrEvaluateRun(LocalDate.parse("2026-05-20"), List.of(ServiceType.GPD), force);
+
+    assertThat(result.shouldStart()).isFalse();
+    assertThat(result.executionId()).isEqualTo("previous-execution");
+    assertThat(result.status()).isEqualTo(status);
+    verify(runsContainer, never()).createItem(any(), any(PartitionKey.class), any());
+    verify(runsContainer, never()).replaceItem(any(), any(String.class), any(PartitionKey.class), any());
+  }
+
+  @Test
+  void concurrentFirstSubmission_shouldReturnWinningRunWithoutDispatch() {
+    CosmosException notFound = cosmosError(404);
+    CosmosException conflict = cosmosError(409);
+    CosmosItemResponse<ReconciliationRunDocument> winnerResponse =
+        response(document(ReconciliationRunStatus.CREATED));
+    when(runsContainer.readItem(eq("2026-05-20__GPD"), any(PartitionKey.class),
+        eq(ReconciliationRunDocument.class)))
+        .thenThrow(notFound).thenReturn(winnerResponse);
+    when(runsContainer.createItem(any(ReconciliationRunDocument.class), any(PartitionKey.class), any()))
+        .thenThrow(conflict);
+
+    ReconciliationRunCreationResult result =
+        store.createOrEvaluateRun(LocalDate.parse("2026-05-20"), List.of(ServiceType.GPD), false);
+
+    assertThat(result.shouldStart()).isFalse();
+    assertThat(result.executionId()).isEqualTo("previous-execution");
+  }
+
+  @ParameterizedTest
+  @CsvSource({"FAILED,false", "FAILED,true", "DONE,true"})
+  void restartingTerminalRun_shouldUseConditionalReplace(ReconciliationRunStatus status, boolean force) {
+    CosmosItemResponse<ReconciliationRunDocument> existingResponse = response(document(status));
+    when(runsContainer.readItem(eq("2026-05-20__GPD"), any(PartitionKey.class),
+        eq(ReconciliationRunDocument.class))).thenReturn(existingResponse);
+
+    ReconciliationRunCreationResult result =
+        store.createOrEvaluateRun(LocalDate.parse("2026-05-20"), List.of(ServiceType.GPD), force);
+
+    assertThat(result.shouldStart()).isTrue();
+    verify(runsContainer).replaceItem(any(ReconciliationRunDocument.class), eq("2026-05-20__GPD"),
+        any(PartitionKey.class), Mockito.argThat(options -> "etag-1".equals(options.getIfMatchETag())));
+  }
+
+  @Test
+  void concurrentTerminalRestart_shouldNotOverwriteWinner() {
+    CosmosItemResponse<ReconciliationRunDocument> failedResponse =
+        response(document(ReconciliationRunStatus.FAILED));
+    CosmosItemResponse<ReconciliationRunDocument> winnerResponse =
+        response(document(ReconciliationRunStatus.CREATED));
+    CosmosException preconditionFailed = cosmosError(412);
+    when(runsContainer.readItem(eq("2026-05-20__GPD"), any(PartitionKey.class),
+        eq(ReconciliationRunDocument.class)))
+        .thenReturn(failedResponse)
+        .thenReturn(winnerResponse);
+    when(runsContainer.replaceItem(any(ReconciliationRunDocument.class), eq("2026-05-20__GPD"),
+        any(PartitionKey.class), any())).thenThrow(preconditionFailed);
+
+    ReconciliationRunCreationResult result =
+        store.createOrEvaluateRun(LocalDate.parse("2026-05-20"), List.of(ServiceType.GPD), false);
+
+    assertThat(result.shouldStart()).isFalse();
+    assertThat(result.status()).isEqualTo(ReconciliationRunStatus.CREATED);
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = {429, 500, 503})
+  void createFailure_shouldPropagateWithoutPretendingRunWasAcquired(int status) {
+    CosmosException notFound = cosmosError(404);
+    when(runsContainer.readItem(eq("2026-05-20__GPD"), any(PartitionKey.class),
+        eq(ReconciliationRunDocument.class))).thenThrow(notFound);
+    CosmosException failure = cosmosError(status);
+    when(runsContainer.createItem(any(ReconciliationRunDocument.class), any(PartitionKey.class), any()))
+        .thenThrow(failure);
+
+    assertThatThrownBy(() -> store.createOrEvaluateRun(
+        LocalDate.parse("2026-05-20"), List.of(ServiceType.GPD), false)).isSameAs(failure);
+  }
+
+  private ReconciliationRunDocument document(ReconciliationRunStatus status) {
+    return ReconciliationRunDocument.builder()
+        .id("2026-05-20__GPD").day("2026-05-20")
+        .logicalRunKey("2026-05-20__GPD").serviceTypes(List.of(ServiceType.GPD))
+        .executionId("previous-execution").status(status).build();
+  }
+
+  @SuppressWarnings("unchecked")
+  private CosmosItemResponse<ReconciliationRunDocument> response(ReconciliationRunDocument document) {
+    CosmosItemResponse<ReconciliationRunDocument> response = mock(CosmosItemResponse.class);
+    when(response.getItem()).thenReturn(document);
+    when(response.getETag()).thenReturn("etag-1");
+    return response;
+  }
+
+  private CosmosException cosmosError(int status) {
+    CosmosException error = mock(CosmosException.class);
+    when(error.getStatusCode()).thenReturn(status);
+    return error;
+  }
+
 }

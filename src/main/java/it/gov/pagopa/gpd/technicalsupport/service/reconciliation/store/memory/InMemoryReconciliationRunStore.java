@@ -14,6 +14,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -42,9 +43,26 @@ public class InMemoryReconciliationRunStore implements ReconciliationRunStore {
       boolean force) {
 
     String logicalRunKey = keyBuilder.logicalRunKey(day, serviceTypes);
-    StoredRun existingRun = runs.get(logicalRunKey);
+    AtomicReference<ReconciliationRunCreationResult> result = new AtomicReference<>();
+    runs.compute(logicalRunKey, (key, existingRun) -> {
+      ReconciliationRunCreationResult evaluated = evaluateRun(day, serviceTypes, force, key, existingRun);
+      result.set(evaluated);
+      if (!evaluated.shouldStart()) {
+        return existingRun;
+      }
+      return new StoredRun(day, List.copyOf(serviceTypes), key, evaluated.executionId(),
+          ReconciliationRunStatus.CREATED, ReconciliationCounters.empty(), null);
+    });
+    return result.get();
+  }
 
-    if (existingRun != null && existingRun.status() == ReconciliationRunStatus.RUNNING && !force) {
+  private ReconciliationRunCreationResult evaluateRun(
+      LocalDate day, List<ServiceType> serviceTypes, boolean force,
+      String logicalRunKey, StoredRun existingRun) {
+
+    if (existingRun != null
+        && (existingRun.status() == ReconciliationRunStatus.CREATED
+            || existingRun.status() == ReconciliationRunStatus.RUNNING)) {
       return toCreationResult(existingRun, false);
     }
 
@@ -71,8 +89,6 @@ public class InMemoryReconciliationRunStore implements ReconciliationRunStore {
             ReconciliationRunStatus.CREATED,
             ReconciliationCounters.empty(),
             null);
-
-    runs.put(logicalRunKey, newRun);
 
     return toCreationResult(newRun, true);
   }
