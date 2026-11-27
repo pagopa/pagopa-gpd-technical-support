@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 @ConditionalOnProperty(prefix = "reconciliation.cosmos", name = "enabled", havingValue = "true")
 public class ReconciliationRangeLease {
   public static final long DEFAULT_LEASE_SECONDS = 120;
+  private static final String STATUS_RUNNING = "RUNNING";
 
   private final CosmosReconciliationRangeStore store;
   private final Clock clock;
@@ -31,7 +32,7 @@ public class ReconciliationRangeLease {
     Instant now = clock.instant();
     assertAcquirable(document, now);
     return write(current, document.toBuilder()
-        .status("RUNNING").ownerId(ownerId.toString())
+        .status(STATUS_RUNNING).ownerId(ownerId.toString())
         .leaseExpiresAt(now.plusSeconds(seconds).toString())
         .heartbeatAt(now.toString()).updatedAt(now.toString()).build());
   }
@@ -61,7 +62,7 @@ public class ReconciliationRangeLease {
 
   private void assertAcquirable(ReconciliationRangeDocument document, Instant now) {
     assertSupported(document);
-    if (!"CREATED".equals(document.status()) && !"RUNNING".equals(document.status())) {
+    if (!"CREATED".equals(document.status()) && !STATUS_RUNNING.equals(document.status())) {
       throw new IllegalStateException("Range is not eligible for automatic acquisition");
     }
     if ((document.ownerId() == null) != (document.leaseExpiresAt() == null)) {
@@ -77,7 +78,7 @@ public class ReconciliationRangeLease {
 
   private void assertOwnedAt(ReconciliationRangeDocument document, UUID ownerId, Instant now) {
     assertSupported(document);
-    if (!"RUNNING".equals(document.status()) || !ownerId.toString().equals(document.ownerId())) {
+    if (!STATUS_RUNNING.equals(document.status()) || !ownerId.toString().equals(document.ownerId())) {
       throw new ReconciliationRangeLeaseLostException("Process does not own this running range");
     }
     if (document.leaseExpiresAt() == null || !expiry(document.leaseExpiresAt()).isAfter(now)) {
