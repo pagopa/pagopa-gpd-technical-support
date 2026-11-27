@@ -43,7 +43,7 @@ public class ReconciliationDailyApiClient {
     if (apiKey != null && (apiKey.isBlank() || apiKey.chars().anyMatch(Character::isISOControl))) {
       throw new IllegalArgumentException("API key must be nonblank and contain no control characters");
     }
-    this.url = URI.create(baseUrl.toString().replaceAll("/+$", "") + PATH);
+    this.url = endpoint(baseUrl);
     this.apiKey = apiKey;
     this.requestTimeout = requestTimeout;
     this.client = HttpClient.newBuilder().connectTimeout(connectTimeout)
@@ -134,5 +134,16 @@ public class ReconciliationDailyApiClient {
     if (!valid) {
       throw new IllegalArgumentException("Invalid reconciliation API base URL");
     }
+  }
+
+  private URI endpoint(URI baseUrl) {
+    String base = baseUrl.toString();
+    int end = base.length();
+
+    while (end > 0 && base.charAt(end - 1) == '/') {
+      end--;
+    }
+
+    return URI.create(base.substring(0, end) + PATH);
   }
 }

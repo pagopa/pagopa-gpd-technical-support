@@ -53,13 +53,19 @@ class ReconciliationDailyRunDocumentMapperTest {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"scanned", "positiveEventsFound", "reconciliationCases", "recovered",
-      "notRecovered", "manualRequired", "technicalFailures", "payExecuted", "payFailed"})
-  void missingCounterIsNotSilentlyConvertedToZero(String field) {
+  @ValueSource(strings = {
+      "scanned", "positiveEventsFound", "reconciliationCases", "recovered",
+      "notRecovered", "manualRequired", "technicalFailures", "payExecuted",
+      "payFailed", "id", "logicalRunKey", "day", "serviceTypesKey",
+      "executionId", "status"
+  })
+  void missingRequiredFieldsAreRejected(String field) {
     var json = document();
     json.remove(field);
+
     assertThatThrownBy(() -> mapper.map(json, DAY, SERVICES, KEY))
-        .isInstanceOf(ReconciliationDailyRunInvalidException.class).hasMessageContaining(field);
+        .isInstanceOf(ReconciliationDailyRunInvalidException.class)
+        .hasMessageContaining(field);
   }
 
   @ParameterizedTest
@@ -118,15 +124,6 @@ class ReconciliationDailyRunDocumentMapperTest {
     assertThat(result.technicalFailures()).isEqualTo(1);
     assertThat(result.payFailed()).isEqualTo(1);
     assertThat(result.status()).isEqualTo(ReconciliationRunStatus.DONE);
-  }
-
-  @ParameterizedTest
-  @ValueSource(strings = {"id", "logicalRunKey", "day", "serviceTypesKey", "executionId", "status"})
-  void missingRequiredIdentityOrStatusIsRejected(String field) {
-    var json = document();
-    json.remove(field);
-    assertThatThrownBy(() -> mapper.map(json, DAY, SERVICES, KEY))
-        .isInstanceOf(ReconciliationDailyRunInvalidException.class).hasMessageContaining(field);
   }
 
   @ParameterizedTest

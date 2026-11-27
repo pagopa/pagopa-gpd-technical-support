@@ -151,7 +151,7 @@ class ReconciliationDailyApiClientTest {
     assertThat(requestPath.get()).isEqualTo("/support" + PATH);
     assertThat(requestHeaders.get().getFirst("Ocp-Apim-Subscription-Key")).isNull();
     var payload = new ObjectMapper().readTree(requestBody.get());
-    assertThat(payload.path("serviceTypes").toString()).isEqualTo("[\"GPD\",\"WISP\"]");
+    assertThat(payload.path("serviceTypes")).hasToString("[\"GPD\",\"WISP\"]");
     assertThat(posts.get()).isEqualTo(1);
   }
 
