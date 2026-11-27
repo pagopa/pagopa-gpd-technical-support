@@ -17,5 +17,6 @@ public class ReconciliationCosmosProperties {
   private String databaseName = "gpd_db";
   private String runsContainerName = "gpd-reconciliation-runs";
   private String reportsContainerName = "gpd-reconciliation-reports";
+  private String rangeRunsContainerName = "gpd-reconciliation-range-runs";
   private boolean useManagedIdentity = false;
 }
