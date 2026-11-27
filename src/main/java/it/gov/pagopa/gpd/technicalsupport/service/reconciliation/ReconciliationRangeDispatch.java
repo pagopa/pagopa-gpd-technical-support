@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,7 @@ public class ReconciliationRangeDispatch {
   private static final String OBSERVED = "OBSERVED";
   private static final String DAILY_EXECUTION_ID = "dailyExecutionId";
   private static final String UPDATED_AT = "updatedAt";
+  private static final String STATE = "state";
 
   private final CosmosReconciliationRangeStore store;
   private final ReconciliationRangeLease lease;
@@ -43,7 +45,7 @@ public class ReconciliationRangeDispatch {
       ReconciliationRangeSnapshot current, UUID ownerId) {
     lease.assertOwned(current, ownerId);
     var context = currentDay(current.document());
-    if (intent(current.document(), context) != null) {
+    if (intent(current.document(), context).isPresent()) {
       return new ReconciliationRangeDispatchPreparation(current, false);
     }
     String now = clock.instant().toString();
@@ -51,7 +53,7 @@ public class ReconciliationRangeDispatch {
     prepared.put("intentId", UUID.randomUUID().toString());
     prepared.put("day", context.day());
     prepared.put("logicalRunKey", context.logicalRunKey());
-    prepared.put("state", PREPARED);
+    prepared.put(STATE, PREPARED);
     prepared.put(DAILY_EXECUTION_ID, null);
     prepared.put("createdAt", now);
     prepared.put(UPDATED_AT, now);
@@ -64,7 +66,7 @@ public class ReconciliationRangeDispatch {
     var context = currentDay(current.document());
     var previous = requireIntent(current.document(), context);
     assertExecutionId(previous, dailyExecutionId);
-    if (!PREPARED.equals(previous.get("state"))) {
+    if (!PREPARED.equals(previous.get(STATE))) {
       return current;
     }
     return write(current, ownerId, transition(previous, ACKNOWLEDGED, dailyExecutionId));
@@ -77,7 +79,7 @@ public class ReconciliationRangeDispatch {
     var previous = requireIntent(current.document(), context);
     assertDailyRun(dailyRun, context, current.document().serviceTypesKey());
     assertExecutionId(previous, dailyRun.executionId());
-    if (OBSERVED.equals(previous.get("state"))) {
+    if (OBSERVED.equals(previous.get(STATE))) {
       return current;
     }
     return write(current, ownerId, transition(previous, OBSERVED, dailyRun.executionId()));
@@ -86,7 +88,7 @@ public class ReconciliationRangeDispatch {
   private Map<String, Object> transition(
       Map<String, Object> previous, String state, String executionId) {
     Map<String, Object> updated = new LinkedHashMap<>(previous);
-    updated.put("state", state);
+    updated.put(STATE, state);
     updated.put(DAILY_EXECUTION_ID, executionId);
     updated.put(UPDATED_AT, clock.instant().toString());
     return updated;
@@ -143,30 +145,42 @@ public class ReconciliationRangeDispatch {
 
   private Map<String, Object> requireIntent(
       ReconciliationRangeDocument document, DayContext context) {
-    var existing = intent(document, context);
-    if (existing == null) {
-      throw new ReconciliationRangeDispatchConflictException("Persist dispatch intent first");
-    }
-    return existing;
+
+    return intent(document, context)
+        .orElseThrow(() -> new ReconciliationRangeDispatchConflictException(
+            "Persist dispatch intent first"));
   }
 
-  private Map<String, Object> intent(ReconciliationRangeDocument document, DayContext context) {
+  private Optional<Map<String, Object>> intent(
+      ReconciliationRangeDocument document, DayContext context) {
+
     var existing = document.currentDispatch();
     if (existing == null) {
-      return null;
+      return Optional.empty();
     }
-    if (!nonBlank(existing.get("intentId")) || !context.day().equals(existing.get("day"))
+
+    if (!nonBlank(existing.get("intentId"))
+        || !context.day().equals(existing.get("day"))
         || !context.logicalRunKey().equals(existing.get("logicalRunKey"))) {
-      throw new ReconciliationRangeDispatchConflictException("Invalid persisted dispatch identity");
+      throw new ReconciliationRangeDispatchConflictException(
+          "Invalid persisted dispatch identity");
     }
-    Object state = existing.get("state");
+
+    Object state = existing.get(STATE);
     Object reference = existing.get(DAILY_EXECUTION_ID);
+
     boolean prepared = PREPARED.equals(state) && reference == null;
-    boolean referenced = (ACKNOWLEDGED.equals(state) || OBSERVED.equals(state)) && nonBlank(reference);
-    if (!existing.containsKey(DAILY_EXECUTION_ID) || !(prepared || referenced)) {
-      throw new ReconciliationRangeDispatchConflictException("Inconsistent persisted dispatch state");
+    boolean referenced =
+        (ACKNOWLEDGED.equals(state) || OBSERVED.equals(state))
+            && nonBlank(reference);
+
+    if (!existing.containsKey(DAILY_EXECUTION_ID)
+        || !(prepared || referenced)) {
+      throw new ReconciliationRangeDispatchConflictException(
+          "Inconsistent persisted dispatch state");
     }
-    return existing;
+
+    return Optional.of(existing);
   }
 
   private boolean nonBlank(Object value) {

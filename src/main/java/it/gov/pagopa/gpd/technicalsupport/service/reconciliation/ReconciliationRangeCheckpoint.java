@@ -14,6 +14,7 @@ import it.gov.pagopa.gpd.technicalsupport.service.reconciliation.store.cosmos.Co
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Objects;
@@ -43,7 +44,8 @@ public class ReconciliationRangeCheckpoint {
     }
     var run = daily.document();
     String logicalKey = day + "__" + document.serviceTypesKey();
-    validateRun(run, day, logicalKey, document.serviceTypesKey());
+    var dailyCompletedAt =
+        validateRun(run, day, logicalKey, document.serviceTypesKey());
     String intentId = observedIntent(document.currentDispatch(), day, logicalKey, run.executionId());
     var counters = ReconciliationRangeDayCounters.from(run);
     String now = clock.instant().toString();
@@ -53,7 +55,10 @@ public class ReconciliationRangeCheckpoint {
         .serviceTypesKey(document.serviceTypesKey()).status(COMPLETED)
         .dailyRun(new DailyRunReference(properties.getRunsContainerName(), day.toString(),
             logicalKey, run.executionId(), daily.etag()))
-        .dailyCounters(counters).dispatchIntentId(intentId).dailyCompletedAt(run.completedAt())
+        .dailyCounters(counters)
+        .dispatchIntentId(intentId)
+        .dailyCompletedAt(
+            dailyCompletedAt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
         .createdAt(now).updatedAt(now).completedAt(now).build();
     var updated = advance(document, day, now);
     lease.assertOwned(current, ownerId);
@@ -89,7 +94,7 @@ public class ReconciliationRangeCheckpoint {
     }
   }
 
-  private void validateRun(
+  private OffsetDateTime validateRun(
       ReconciliationRunDocument run, LocalDate day, String logicalKey, String servicesKey) {
     boolean matching = logicalKey.equals(run.id()) && logicalKey.equals(run.logicalRunKey())
         && day.toString().equals(run.day()) && servicesKey.equals(run.serviceTypesKey());
@@ -99,7 +104,7 @@ public class ReconciliationRangeCheckpoint {
     if (!nonBlank(run.completedAt())) {
       throw new IllegalArgumentException("Missing daily completion timestamp");
     }
-    OffsetDateTime.parse(run.completedAt());
+    return OffsetDateTime.parse(run.completedAt());
   }
 
   private String observedIntent(
