@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import it.gov.pagopa.gpd.technicalsupport.model.gpd.ServiceType;
 import jakarta.validation.Validation;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
@@ -14,7 +15,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 class ReconciliationRangeRequestTest {
 
   static Stream<ReconciliationRangeRequest> invalidRequests() {
-    LocalDate day = LocalDate.of(2026, 9, 1);
+    LocalDate day = LocalDate.of(2026, Month.SEPTEMBER, 1);
 
     return Stream.of(
         new ReconciliationRangeRequest(null, day, List.of(ServiceType.GPD)),

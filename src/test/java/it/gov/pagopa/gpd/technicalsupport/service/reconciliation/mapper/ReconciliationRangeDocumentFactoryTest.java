@@ -15,6 +15,7 @@ import it.gov.pagopa.gpd.technicalsupport.service.reconciliation.ReconciliationR
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.List;
@@ -32,7 +33,7 @@ class ReconciliationRangeDocumentFactoryTest {
   }
 
   private ReconciliationRangeRequest request() {
-    return new ReconciliationRangeRequest(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30),
+    return new ReconciliationRangeRequest(LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30),
         List.of(ServiceType.WISP, ServiceType.GPD, ServiceType.GPD));
   }
 
@@ -55,14 +56,14 @@ class ReconciliationRangeDocumentFactoryTest {
 
   @Test
   void sameDateRepresentsOneDay() {
-    var request = new ReconciliationRangeRequest(LocalDate.of(2026, 9, 1),
-        LocalDate.of(2026, 9, 1), List.of(ServiceType.GPD));
+    var request = new ReconciliationRangeRequest(LocalDate.of(2026, Month.SEPTEMBER, 1),
+        LocalDate.of(2026, Month.SEPTEMBER, 1), List.of(ServiceType.GPD));
     assertThat(factory.newCreated("dev", "request-1", request).totalDays()).isEqualTo(1);
   }
 
   @Test
   void rejectsMissingFieldsBeforeBuildingDocument() {
-    var day = LocalDate.of(2026, 9, 1);
+    var day = LocalDate.of(2026, Month.SEPTEMBER, 1);
     var invalid = Arrays.asList(null,
         new ReconciliationRangeRequest(null, day, List.of(ServiceType.GPD)),
         new ReconciliationRangeRequest(day, null, List.of(ServiceType.GPD)),
@@ -77,7 +78,7 @@ class ReconciliationRangeDocumentFactoryTest {
 
   @Test
   void validatesDatesBeforeBuildingDocument() {
-    var today = LocalDate.of(2026, 11, 25);
+    var today = LocalDate.of(2026, Month.NOVEMBER, 25);
     var request = new ReconciliationRangeRequest(today, today, List.of(ServiceType.GPD));
     assertThatThrownBy(() -> factory.newCreated("dev", "request-1", request))
         .isInstanceOf(AppException.class).hasMessageContaining("too recent");

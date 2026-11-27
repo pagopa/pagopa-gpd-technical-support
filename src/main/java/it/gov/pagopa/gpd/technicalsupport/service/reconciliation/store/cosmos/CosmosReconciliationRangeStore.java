@@ -64,6 +64,16 @@ public class CosmosReconciliationRangeStore {
     }
   }
 
+  public ReconciliationRangeSnapshot replace(
+      ReconciliationRangeSnapshot current, ReconciliationRangeDocument updated) {
+    assertSameRequest(current.document(), updated);
+    return snapshot(container.replaceItem(updated, "summary",
+        new PartitionKey(current.document().executionId()),
+        new CosmosItemRequestOptions()
+            .setIfMatchETag(current.etag())
+            .setContentResponseOnWriteEnabled(true)));
+  }
+
   private String canonicalId(String value) {
     try {
       return UUID.fromString(value).toString();

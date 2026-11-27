@@ -20,6 +20,7 @@ import it.gov.pagopa.gpd.technicalsupport.config.reconciliation.ReconciliationPr
 import it.gov.pagopa.gpd.technicalsupport.exception.AppException;
 import it.gov.pagopa.gpd.technicalsupport.model.gpd.ServiceType;
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.ReconciliationRangeRequest;
+import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.ReconciliationRangeSnapshot;
 import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.cosmos.ReconciliationRangeDocument;
 import it.gov.pagopa.gpd.technicalsupport.service.reconciliation.ReconciliationRangeIdentity;
 import it.gov.pagopa.gpd.technicalsupport.service.reconciliation.ReconciliationRangeValidator;
@@ -27,6 +28,7 @@ import it.gov.pagopa.gpd.technicalsupport.service.reconciliation.mapper.Reconcil
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +52,7 @@ class CosmosReconciliationRangeStoreTest {
     factory = new ReconciliationRangeDocumentFactory(new ReconciliationRangeIdentity(),
         new ReconciliationRangeValidator(new ReconciliationProperties(), clock), clock);
     store = new CosmosReconciliationRangeStore(container, factory);
-    request = new ReconciliationRangeRequest(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30),
+    request = new ReconciliationRangeRequest(LocalDate.of(2026, Month.SEPTEMBER, 1), LocalDate.of(2026, Month.SEPTEMBER, 30),
         List.of(ServiceType.WISP, ServiceType.GPD, ServiceType.GPD));
   }
 
@@ -169,7 +171,8 @@ class CosmosReconciliationRangeStoreTest {
     var notFound = error(404);
     when(container.readItem(eq("summary"), any(PartitionKey.class),
         eq(ReconciliationRangeDocument.class))).thenThrow(notFound);
-    assertThatThrownBy(() -> store.get(document().executionId()))
+    var executionId = document().executionId();
+    assertThatThrownBy(() -> store.get(executionId))
         .isInstanceOfSatisfying(AppException.class,
             exception -> assertThat(exception.getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND));
     verify(container).readItem(eq("summary"), any(PartitionKey.class), eq(ReconciliationRangeDocument.class));
@@ -181,7 +184,8 @@ class CosmosReconciliationRangeStoreTest {
     var error = error(503);
     when(container.readItem(eq("summary"), any(PartitionKey.class),
         eq(ReconciliationRangeDocument.class))).thenThrow(error);
-    assertThatThrownBy(() -> store.get(document().executionId())).isSameAs(error);
+    var executionId = document().executionId();
+    assertThatThrownBy(() -> store.get(executionId)).isSameAs(error);
   }
 
   @Test
@@ -200,7 +204,8 @@ class CosmosReconciliationRangeStoreTest {
     var persisted = response(document(), null);
     when(container.readItem(eq("summary"), any(PartitionKey.class),
         eq(ReconciliationRangeDocument.class))).thenReturn(persisted);
-    assertThatThrownBy(() -> store.get(document().executionId())).isInstanceOf(IllegalStateException.class);
+    var executionId = document().executionId();
+    assertThatThrownBy(() -> store.get(executionId)).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
@@ -226,6 +231,48 @@ class CosmosReconciliationRangeStoreTest {
     verify(container, times(2)).createItem(any(ReconciliationRangeDocument.class), any(PartitionKey.class),
         any(CosmosItemRequestOptions.class));
     verify(container).readItem(eq("summary"), any(PartitionKey.class), eq(ReconciliationRangeDocument.class));
+    verifyNoMoreInteractions(container);
+  }
+
+  @Test
+  void replaceRequiresMatchingEtagAndReturnsPersistedSnapshot() {
+    var original = document();
+    var current = new ReconciliationRangeSnapshot(original, "original-etag");
+    var updated = original.toBuilder().status("RUNNING").build();
+    var persisted = response(updated, "updated-etag");
+    when(container.replaceItem(eq(updated), eq("summary"), any(PartitionKey.class),
+        any(CosmosItemRequestOptions.class))).thenReturn(persisted);
+    var result = store.replace(current, updated);
+    var options = ArgumentCaptor.forClass(CosmosItemRequestOptions.class);
+    var pk = ArgumentCaptor.forClass(PartitionKey.class);
+    verify(container).replaceItem(eq(updated), eq("summary"), pk.capture(), options.capture());
+    assertThat(options.getValue().getIfMatchETag()).isEqualTo("original-etag");
+    assertThat(options.getValue().isContentResponseOnWriteEnabled()).isTrue();
+    assertThat(pk.getValue().toString()).contains(original.executionId());
+    assertThat(result.document()).isSameAs(updated);
+    assertThat(result.etag()).isEqualTo("updated-etag");
+    verifyNoMoreInteractions(container);
+  }
+
+  @Test
+  void replaceCannotChangeImmutableParameters() {
+    var current = new ReconciliationRangeSnapshot(document(), "etag");
+    var updated = current.document().toBuilder().to("2026-10-01").build();
+    assertThatThrownBy(() -> store.replace(current, updated)).isInstanceOf(AppException.class);
+    verifyNoInteractions(container);
+  }
+
+  @ParameterizedTest
+  @ValueSource(ints = {412, 503})
+  void replaceErrorIsPropagatedWithoutReadOrRetry(int status) {
+    var current = new ReconciliationRangeSnapshot(document(), "etag");
+    var error = error(status);
+    when(container.replaceItem(any(ReconciliationRangeDocument.class), eq("summary"),
+        any(PartitionKey.class), any(CosmosItemRequestOptions.class))).thenThrow(error);
+    var updated = current.document();
+    assertThatThrownBy(() -> store.replace(current, updated)).isSameAs(error);
+    verify(container).replaceItem(any(ReconciliationRangeDocument.class), eq("summary"),
+        any(PartitionKey.class), any(CosmosItemRequestOptions.class));
     verifyNoMoreInteractions(container);
   }
 }

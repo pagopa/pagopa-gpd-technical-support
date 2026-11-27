@@ -10,6 +10,7 @@ import it.gov.pagopa.gpd.technicalsupport.model.reconciliation.ReconciliationRan
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,35 +46,39 @@ class ReconciliationRangeValidatorTest {
   @Test
   void acceptsMonthWithoutApplyingDailyWindowLimit() {
     properties.setMaxProcessingWindowDays(1);
+    var range = request("2026-09-01", "2026-09-30");
 
-    assertDoesNotThrow(
-        () -> validator.validate(request("2026-09-01", "2026-09-30")));
+    assertDoesNotThrow(() -> validator.validate(range));
   }
 
   @Test
   void acceptsSingleDayAtProcessingBoundary() {
-    assertDoesNotThrow(
-        () -> validator.validate(request("2026-11-23", "2026-11-23")));
+    var range = request("2026-11-23", "2026-11-23");
+
+    assertDoesNotThrow(() -> validator.validate(range));
   }
 
   @Test
   void acceptsRangeAcrossYearBoundary() {
-    assertDoesNotThrow(
-        () -> validator.validate(request("2025-12-01", "2026-01-31")));
+    var range = request("2025-12-01", "2026-01-31");
+
+    assertDoesNotThrow(() -> validator.validate(range));
   }
 
   @Test
   void rejectsReversedDates() {
-    assertThatThrownBy(
-        () -> validator.validate(request("2026-09-30", "2026-09-01")))
+    var range = request("2026-09-30", "2026-09-01");
+
+    assertThatThrownBy(() -> validator.validate(range))
         .isInstanceOf(AppException.class)
         .hasMessageContaining("'to'");
   }
 
   @Test
   void rejectsTodayUsingInjectedClock() {
-    assertThatThrownBy(
-        () -> validator.validate(request("2026-11-23", "2026-11-24")))
+    var range = request("2026-11-23", "2026-11-24");
+
+    assertThatThrownBy(() -> validator.validate(range))
         .isInstanceOf(AppException.class)
         .hasMessageContaining("2026-11-23");
   }
@@ -81,12 +86,12 @@ class ReconciliationRangeValidatorTest {
   @Test
   void respectsConfiguredProcessingDelay() {
     properties.setMinProcessingDelayDays(3);
+    var acceptedRange = request("2026-11-01", "2026-11-21");
+    var tooRecentRange = request("2026-11-01", "2026-11-22");
 
-    assertDoesNotThrow(
-        () -> validator.validate(request("2026-11-01", "2026-11-21")));
+    assertDoesNotThrow(() -> validator.validate(acceptedRange));
 
-    assertThatThrownBy(
-        () -> validator.validate(request("2026-11-01", "2026-11-22")))
+    assertThatThrownBy(() -> validator.validate(tooRecentRange))
         .isInstanceOf(AppException.class)
         .hasMessageContaining("2026-11-21");
   }
@@ -94,12 +99,12 @@ class ReconciliationRangeValidatorTest {
   @ParameterizedTest
   @ValueSource(ints = {0, 10000})
   void rejectsYearsUnsupportedByPythonWorker(int year) {
-    var request = new ReconciliationRangeRequest(
-        LocalDate.of(year, 1, 1),
-        LocalDate.of(year, 1, 2),
+    var range = new ReconciliationRangeRequest(
+        LocalDate.of(year, Month.JANUARY, 1),
+        LocalDate.of(year, Month.JANUARY, 2),
         List.of(ServiceType.GPD));
 
-    assertThatThrownBy(() -> validator.validate(request))
+    assertThatThrownBy(() -> validator.validate(range))
         .isInstanceOf(AppException.class)
         .hasMessageContaining("0001 and 9999");
   }

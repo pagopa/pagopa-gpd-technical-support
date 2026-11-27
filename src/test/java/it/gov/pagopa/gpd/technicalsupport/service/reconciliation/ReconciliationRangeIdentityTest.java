@@ -43,7 +43,7 @@ class ReconciliationRangeIdentityTest {
   void generatedIdentifierIsAValidUuid() {
     String result = identity.executionId("dev", "request-1");
 
-    assertThat(UUID.fromString(result).toString()).isEqualTo(result);
+    assertThat(UUID.fromString(result)).hasToString(result);
     assertThat(identity.executionId("prod", "a".repeat(128))).isNotBlank();
   }
 
